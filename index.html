@@ -63,6 +63,44 @@
 .user-welcome{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding:11px 14px;border:1px solid #ffffff35;border-radius:13px;background:#ffffff16;color:#fff}
 .user-welcome strong{font-size:16px}
 .user-plan-badge{display:inline-block;padding:5px 10px;border-radius:30px;background:#d9f0df;color:#155734;font-size:11px;font-weight:800;letter-spacing:.3px}
+
+/* Meta de peso */
+.body-goal-panel{padding:16px;border:1px solid #d9eade;border-radius:15px;background:linear-gradient(120deg,#f1f8f2,#fbfdfb);margin:14px 0 18px}
+.body-goal-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.body-goal-kicker{display:block;font-size:11px;letter-spacing:1px;font-weight:800;color:#668071}
+.body-goal-top>div:first-child strong{display:block;font-size:27px;color:#176443;margin-top:3px}
+.body-goal-remaining{text-align:right;color:#24563a;font-weight:750}
+.body-goal-remaining small{display:block;color:#718176;font-size:11px;font-weight:500;margin-top:3px}
+.body-goal-track{height:12px;border-radius:20px;background:#dcebe0;overflow:hidden;margin:14px 0}
+.body-goal-track span{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#55b77c,#176443);transition:width .25s}
+.body-goal-form{display:grid;grid-template-columns:1fr 120px auto;gap:10px;align-items:end}
+.body-goal-form label{margin:0}
+.body-goal-form input{min-width:0}
+.body-goal-form button{white-space:nowrap}
+@media(max-width:600px){.body-goal-form{grid-template-columns:1fr 1fr}.body-goal-form label{grid-column:1/-1}.body-goal-form button{width:100%}.body-goal-top{align-items:flex-start}}
+/* Gráfico de evolução do peso */
+.body-weight-chart{display:flex;align-items:flex-end;gap:12px;min-height:190px;padding:18px 14px 8px;margin:10px 0 18px;border:1px solid #e1eee4;border-radius:14px;background:linear-gradient(180deg,#f7fbf8,#fff);overflow-x:auto}
+.body-weight-chart-empty{width:100%;align-self:center;text-align:center;color:#718176;font-size:13px}
+.body-weight-bar{flex:1 0 54px;max-width:90px;min-width:54px;height:155px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}
+.body-weight-bar strong{font-size:11px;color:#24563a;white-space:nowrap}
+.body-weight-bar span{display:block;width:32px;min-height:5px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#55b77c,#176443)}
+.body-weight-bar small{font-size:10px;color:#718176;white-space:nowrap}
+/* Evolução física e IMC */
+.body-evolution-card{border-color:#d6e8da}
+.body-evolution-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.body-evolution-stat{background:#f1f8f2;border:1px solid #dfede2;border-radius:13px;padding:14px}
+.body-evolution-stat span,.body-evolution-stat small{display:block;color:#718176;font-size:12px}
+.body-evolution-stat strong{display:block;color:#176443;font-size:24px;margin:4px 0}
+.body-evolution-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;margin:14px 0}
+.body-evolution-form label{margin-top:0}
+.body-evolution-form input[readonly]{background:#f1f5f2;color:#526b5b}
+.body-weight-history{display:grid;gap:8px;margin-top:10px}
+.body-weight-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;border:1px solid #e4eee6;border-radius:11px;background:#fff}
+.body-weight-entry strong{color:#244b34}
+.body-weight-entry small{display:block;color:#718176}
+.body-weight-entry .bmi-chip{background:#eaf5ed;color:#176443;border-radius:20px;padding:6px 9px;font-size:12px;font-weight:750;white-space:nowrap}
+@media(max-width:760px){.body-evolution-summary{grid-template-columns:1fr 1fr}.body-evolution-form{grid-template-columns:1fr 1fr}.body-evolution-form button{grid-column:1/-1;width:100%}}
+@media(max-width:460px){.body-evolution-summary{grid-template-columns:1fr}.body-weight-entry{align-items:flex-start;flex-direction:column}}
 </style></head><body><header><div class="pill">🌱 WEB APP • VERSÃO 3.1</div><h1>Projeto Seca Saudável</h1><p>30 dias de alimentação equilibrada, movimento e autocuidado.</p><div id="userWelcome" class="user-welcome" hidden><strong id="userGreeting"></strong><span id="userPlanBadge" class="user-plan-badge"></span></div></header><main><nav class="tabs" id="tabs"><button data-tab="inicio" class="active">🏠 Início</button><button data-tab="calendario">📅 30 dias</button><button data-tab="refeicoes">🥗 Refeições</button><button data-tab="academia">🏋️ Academia</button><button data-tab="postagens">📣 Postagens</button><button data-tab="compras">🛒 Compras</button><button data-tab="progresso">📈 Progresso</button><button data-tab="admin">⚙️ Conteúdo</button><button data-tab="conta">👤 Conta / Premium</button></nav><section id="inicio" class="panel active"><div class="hero"><h2>Seu mês de hábitos saudáveis 💚</h2><p>Não existe alimento milagroso nem perda localizada de gordura. O objetivo é construir uma rotina possível e sustentável.</p><div class="row"><span id="homeCount" class="stat">0/30</span><span>dias concluídos</span></div><div class="bar"><span id="bar" style="width:0%"></span></div></div><div class="grid"><div class="card"><h3>💧 Água de hoje</h3><div class="stat" id="waterCount">0 copos</div><p class="muted">Registre copos de 250 ml. A necessidade de água varia entre pessoas.</p><div class="row"><button onclick="waterChange(-1)" class="secondary">−</button><button onclick="waterChange(1)">+ Adicionar copo</button></div></div><div class="card"><h3>🚶 Movimento de hoje</h3><label class="check"><input type="checkbox" id="activity" onchange="saveActivity()"> Registrei alguma atividade física</label><p class="muted">Escolha atividades adequadas à sua condição e capacidade.</p></div><div class="card"><h3>🌿 Missão do dia</h3><h4 id="missionTitle"></h4><p id="missionText"></p><button onclick="switchTab('calendario')">Ver calendário</button></div></div></section><section id="calendario" class="panel"><div class="card"><h2>Desafio de 30 dias</h2><p class="muted">Escolha um dia para visualizar a dica e registrar sua conclusão.</p><div id="calendar" class="calendar"></div></div><div class="card"><span class="pill" id="dayTag">Dia 1</span><h2 id="dayTitle"></h2><p id="dayText"></p><p><b>Missão:</b> <span id="dayMission"></span></p><div class="row"><button onclick="completeDay()" id="completeBtn">✓ Concluir dia</button><button onclick="changeDay(-1)" class="secondary">← Anterior</button><button onclick="changeDay(1)" class="secondary">Próximo →</button></div></div></section><section id="refeicoes" class="panel"><div class="card"><h2>Cardápio ilustrativo</h2><p>Selecione uma opção de dia para variar as refeições. As porções devem ser individualizadas.</p><label for="mealSelect">Dia do cardápio</label><select id="mealSelect" onchange="renderMeals()"></select><div id="meals"></div><p class="notice">Este conteúdo é educativo, não uma dieta prescrita. Considere alergias, restrições alimentares e orientação de nutricionista.</p></div></section><section id="academia" class="panel gym-page">
  <div class="gym-hero">
   <div class="gym-hero-copy">
@@ -176,9 +214,50 @@
 </section>
 <section id="postagens" class="panel"><div class="card"><h2>Postagens</h2><p class="muted">Crie uma legenda para compartilhar o conteúdo do desafio.</p><label for="postSelect">Dia da postagem</label><select id="postSelect" onchange="renderPost()"></select><div id="postText" class="post" aria-live="polite"></div><div class="row"><button type="button" onclick="copyPost()">Copiar legenda</button><button type="button" class="secondary" onclick="sharePost()">Compartilhar</button></div><p id="copyStatus" class="muted" role="status"></p></div></section>
 <section id="compras" class="panel"><div class="card"><h2>Lista de compras</h2><p class="muted">Marque os itens conforme organizar suas compras.</p><div id="shopping"></div><button type="button" class="secondary" onclick="resetShopping()">Limpar marcações</button></div></section>
-<section id="progresso" class="panel"><div class="card"><h2>Meu progresso</h2><div class="two"><div><p class="muted">Dias concluídos</p><div id="progressCount" class="stat">0/30</div></div><div><p class="muted">Dias com atividade registrada</p><div id="activityCount" class="stat">0</div></div></div><label for="note">Anotações do dia</label><textarea id="note" rows="4" placeholder="Registre como foi seu dia..."></textarea><div class="row"><button type="button" onclick="saveNote()">Salvar anotação</button><button type="button" class="secondary" onclick="exportData()">Exportar meus dados</button></div><p id="noteStatus" class="muted" role="status"></p></div></section>
+<section id="progresso" class="panel"><div class="card"><h2>Meu progresso</h2><div class="two"><div><p class="muted">Dias concluídos</p><div id="progressCount" class="stat">0/30</div></div><div><p class="muted">Dias com atividade registrada</p><div id="activityCount" class="stat">0</div></div></div><label for="note">Anotações do dia</label><textarea id="note" rows="4" placeholder="Registre como foi seu dia..."></textarea><div class="row"><button type="button" onclick="saveNote()">Salvar anotação</button><button type="button" class="secondary" onclick="exportData()">Exportar meus dados</button></div><p id="noteStatus" class="muted" role="status"></p></div>
+<div class="card body-evolution-card">
+  <h2>⚖️ Minha evolução física</h2>
+  <p class="muted">Acompanhe suas pesagens e veja o IMC calculado automaticamente. Seus registros ficam vinculados à conta conectada.</p>
+  <div class="body-evolution-summary">
+    <div class="body-evolution-stat"><span>Altura cadastrada</span><strong id="bodyHeightDisplay">1,72 m</strong></div>
+    <div class="body-evolution-stat"><span>Peso mais recente</span><strong id="bodyLatestWeight">—</strong></div>
+    <div class="body-evolution-stat"><span>IMC atual</span><strong id="bodyLatestBmi">—</strong><small id="bodyBmiCategory">Registre seu peso para calcular</small></div>
+  </div>
+  <div class="body-goal-panel">
+    <div class="body-goal-top">
+      <div><span class="body-goal-kicker">SUA META DE PESO</span><strong id="bodyGoalWeightDisplay">90 kg</strong></div>
+      <div class="body-goal-remaining"><span id="bodyGoalRemaining">18 kg para a meta</span><small id="bodyGoalProgressText">Meta definida</small></div>
+    </div>
+    <div class="body-goal-track"><span id="bodyGoalProgressBar" style="width:0%"></span></div>
+    <form id="bodyGoalForm" class="body-goal-form" onsubmit="saveBodyGoal(event)">
+      <label for="bodyGoalWeight">Alterar meta (kg)</label>
+      <input id="bodyGoalWeight" type="number" min="1" max="500" step="0.1" value="90" required>
+      <button type="submit" class="secondary">Salvar meta</button>
+    </form>
+  </div>
+  <form id="bodyEvolutionForm" class="body-evolution-form" onsubmit="saveBodyMeasurement(event)">
+    <div><label for="bodyWeight">Peso (kg)</label><input id="bodyWeight" type="number" min="1" max="500" step="0.1" placeholder="Ex.: 98" required></div>
+    <div><label for="bodyDate">Data da pesagem</label><input id="bodyDate" type="date" required></div>
+    <div><label>Altura fixa</label><input id="bodyHeight" type="text" value="1,72 m" readonly aria-label="Altura cadastrada: 1,72 metro"></div>
+    <button type="submit" id="bodySaveButton">Registrar pesagem</button>
+  </form>
+  <p id="bodyEvolutionStatus" class="muted" role="status">Na primeira pesagem, os campos sugerem os dados informados anteriormente: 98 kg e 1,72 m. Clique em registrar para salvar na sua conta.</p>
+  <h3>Gráfico de evolução do peso</h3>
+  <p class="muted">Cada barra representa uma pesagem registrada, da mais antiga para a mais recente.</p>
+  <div id="bodyWeightChart" class="body-weight-chart" role="img" aria-label="Gráfico de evolução do peso">Registre pesagens para visualizar o gráfico.</div>
+  <div class="row" style="justify-content:space-between;align-items:center;margin-top:18px;gap:10px">
+    <h3 style="margin:0">Histórico de peso</h3>
+    <button type="button" class="secondary" onclick="deleteAllBodyMeasurements()">Excluir todo o histórico</button>
+  </div>
+  <div id="bodyWeightHistory" class="body-weight-history">Nenhuma pesagem registrada.</div>
+  <p class="notice">O IMC é um indicador geral de triagem para adultos e não substitui avaliação profissional. Ele não considera, por exemplo, a composição corporal.</p>
+</div>
+</section>
 <section id="admin" class="panel"><div class="card"><h2>Editar conteúdo dos 30 dias</h2><p class="muted">As alterações ficam salvas neste navegador.</p><label for="editSelect">Dia</label><select id="editSelect" onchange="loadEditor()"></select><label for="editTitle">Título</label><input id="editTitle" type="text"><label for="editBody">Descrição</label><textarea id="editBody" rows="3"></textarea><label for="editMission">Missão</label><textarea id="editMission" rows="2"></textarea><div class="row"><button type="button" onclick="saveEditor()">Salvar conteúdo</button><button type="button" class="secondary" onclick="restoreEditor()">Restaurar original</button></div><p id="editStatus" class="muted" role="status"></p></div></section>
-<section id="conta" class="panel"><div class="auth-intro"><div class="auth-welcome"><div><div class="auth-kicker">PROJETO SECA SAUDÁVEL</div><h2>Cuide da sua rotina, um dia de cada vez.</h2><p>Entre ou crie sua conta para acompanhar seu planejamento.</p></div><div class="auth-points"><span class="auth-point">Hábitos saudáveis</span><span class="auth-point">Treinos</span><span class="auth-point">Sua evolução</span></div></div><div class="auth-form-card"><h3>Entrar</h3><p class="auth-subtitle">Acesse sua conta existente.</p><form id="loginForm" novalidate onsubmit="event.preventDefault();accountLogin()"><label for="loginEmail">E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="seu@email.com" required><label for="loginPassword">Senha</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button type="submit" class="auth-submit">Entrar</button><p id="loginMessage" class="auth-msg" role="status" aria-live="polite"></p></form></div></div>
+<section id="conta" class="panel"><div class="auth-intro"><div class="auth-welcome"><div><div class="auth-kicker">PROJETO SECA SAUDÁVEL</div><h2>Cuide da sua rotina, um dia de cada vez.</h2><p>Entre ou crie sua conta para acompanhar seu planejamento.</p></div><div class="auth-points"><span class="auth-point">Hábitos saudáveis</span><span class="auth-point">Treinos</span><span class="auth-point">Sua evolução</span></div></div><div class="auth-form-card"><h3>Entrar</h3><p class="auth-subtitle">Acesse sua conta existente.</p><form id="loginForm" novalidate onsubmit="event.preventDefault();accountLogin()"><label for="loginEmail">E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="seu@email.com" required><label for="loginPassword">Senha</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button type="submit" class="auth-submit">Entrar</button><p id="loginMessage" class="auth-msg" role="status" aria-live="polite"></p><p style="margin:12px 0 0;text-align:center"><button type="button" class="secondary" onclick="showForgotPassword()" style="padding:7px 10px">Esqueci minha senha</button></p></form>
+<div id="forgotPasswordBox" hidden style="margin-top:16px;padding-top:14px;border-top:1px solid #e6eee8"><h4 style="margin:0 0 6px">Recuperar senha</h4><p class="muted">Informe o e-mail da sua conta para receber um link de redefinição.</p><form id="forgotPasswordForm" onsubmit="event.preventDefault();requestPasswordReset()"><label for="forgotEmail">E-mail cadastrado</label><input id="forgotEmail" type="email" autocomplete="email" placeholder="seu@email.com" required><button type="submit" class="auth-submit">Enviar link de recuperação</button><p id="forgotMessage" class="auth-msg" role="status" aria-live="polite"></p></form></div>
+<div id="resetPasswordBox" hidden style="margin-top:16px;padding-top:14px;border-top:1px solid #e6eee8"><h4 style="margin:0 0 6px">Criar nova senha</h4><p class="muted">Escolha uma senha com pelo menos 10 caracteres.</p><form id="resetPasswordForm" onsubmit="event.preventDefault();submitNewPassword()"><label for="newPassword">Nova senha</label><input id="newPassword" type="password" autocomplete="new-password" minlength="10" required><label for="confirmNewPassword">Confirmar nova senha</label><input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="10" required><button type="submit" class="auth-submit">Salvar nova senha</button><p id="resetMessage" class="auth-msg" role="status" aria-live="polite"></p></form></div>
+</div></div>
 <div class="auth-form-card"><h3>Criar conta</h3><p class="auth-subtitle">Preencha os dados para se cadastrar.</p><form id="registerForm" novalidate onsubmit="event.preventDefault();accountRegister()"><label for="registerName">Nome</label><input id="registerName" type="text" autocomplete="name" placeholder="Seu nome" required><label for="registerEmail">E-mail</label><input id="registerEmail" type="email" autocomplete="email" placeholder="seu@email.com" required><label for="registerPassword">Senha</label><input id="registerPassword" type="password" autocomplete="new-password" minlength="10" placeholder="Mínimo de 10 caracteres" required><button type="submit" class="auth-submit">Cadastrar</button><p id="registerMessage" class="auth-msg" role="status" aria-live="polite"></p></form></div>
 <div class="card auth-premium-card" style="margin-top:18px">
   <h3>Minha conta e assinatura</h3>
@@ -196,7 +275,7 @@
 const themes=[['Comece com planejamento','Defina hábitos realistas e organize sua semana.','Planeje duas refeições equilibradas.'],['Hidratação consciente','Mantenha água acessível durante o dia.','Registre sua ingestão de água.'],['Proteínas variadas','Inclua ovos, feijões, peixe ou outras fontes de proteína.','Varie uma fonte de proteína hoje.'],['Fibras no dia a dia','Frutas, legumes e grãos integrais ajudam na saciedade.','Acrescente um alimento rico em fibras.'],['Movimento possível','Caminhar e se movimentar fazem parte de uma rotina ativa.','Faça uma atividade adequada ao seu ritmo.'],['Sono e descanso','O descanso é importante para a saúde e a recuperação.','Organize um horário para dormir.'],['Refeições com atenção','Comer sem pressa ajuda a reconhecer sinais de fome e saciedade.','Faça uma refeição com menos distrações.'],['Prato colorido','Diferentes vegetais ajudam a diversificar os nutrientes.','Inclua vegetais de duas cores.'],['Reduza bebidas açucaradas','Substituições graduais podem melhorar a qualidade da alimentação.','Escolha água em uma refeição.'],['Lanches práticos','Frutas, iogurte e castanhas podem ser opções convenientes.','Prepare um lanche simples.'],['Alimentos in natura','Priorize alimentos frescos e minimamente processados.','Inclua uma fruta no dia.'],['Planeje suas compras','Uma lista facilita refeições caseiras e reduz desperdícios.','Revise o que já tem em casa.'],['Cozinhe em casa','Preparar refeições ajuda a conhecer os ingredientes utilizados.','Experimente uma receita simples.'],['Constância sem culpa','Um dia diferente não define seu progresso.','Retome um hábito positivo.'],['Metade do caminho','Reflita sobre o que funcionou até agora.','Anote uma conquista não relacionada ao peso.'],['Carboidratos equilibrados','Arroz, batata e mandioca podem fazer parte de refeições saudáveis.','Combine carboidrato, proteína e vegetais.'],['Leguminosas nutritivas','Feijão, lentilha e grão-de-bico são alimentos nutritivos.','Inclua uma leguminosa no prato.'],['Atividade prazerosa','Escolha movimentos de que você goste e que sejam seguros.','Experimente uma atividade agradável.'],['Rotina flexível','Uma alimentação saudável pode se adaptar ao seu dia.','Planeje uma alternativa prática para amanhã.'],['Leia os rótulos','Observe ingredientes e informações nutricionais.','Compare os rótulos de dois produtos.'],['Cuide do bem-estar','Saúde envolve aspectos físicos, mentais e sociais.','Reserve um tempo para relaxar.'],['Coma com variedade','Diversificar o cardápio evita monotonia alimentar.','Experimente um vegetal diferente.'],['Refeições acessíveis','Comida saudável pode incluir arroz, feijão, ovos e verduras.','Monte uma refeição simples e nutritiva.'],['Faça pausas','Pequenas pausas ao longo do dia ajudam a cuidar da rotina.','Levante-se e movimente-se quando possível.'],['Valorize o progresso','Disposição e hábitos são conquistas importantes.','Registre uma melhoria percebida.'],['Prepare antecipadamente','Organização ajuda nos dias corridos.','Deixe um ingrediente preparado.'],['Evite soluções milagrosas','Dietas extremas e produtos milagrosos não são necessários.','Escolha uma atitude sustentável.'],['Respeite seu corpo','As necessidades alimentares variam entre pessoas.','Observe sua fome e saciedade.'],['Compartilhe hábitos bons','Apoio social pode tornar mudanças mais agradáveis.','Convide alguém para uma atividade saudável.'],['Continue sua jornada','O fim do desafio é o começo de hábitos duradouros.','Escolha três hábitos para manter.']];
 const mealPlans=[ [['Ovos mexidos, pão integral e mamão','Arroz, feijão, frango e salada','Iogurte natural e banana','Sopa de legumes com lentilha'],['Aveia com leite ou bebida vegetal e fruta','Peixe, batata e legumes','Maçã e castanhas','Omelete com salada e arroz'],['Pão integral, queijo branco e fruta','Arroz, feijão, abóbora e ovo','Iogurte e aveia','Frango com legumes e mandioca'],['Iogurte, aveia e morangos','Macarrão integral com vegetais e grão-de-bico','Banana com pasta de amendoim','Arroz, feijão e salada com ovos'],['Omelete com tomate e fruta','Arroz, lentilha e frango com brócolis','Fruta e iogurte','Sopa de abóbora com feijão'],['Pão integral com ovo e fruta','Peixe, arroz e legumes','Castanhas e fruta','Salada de grão-de-bico com batata'],['Aveia, banana e iogurte','Arroz, feijão, carne magra ou tofu e salada','Fruta da estação','Omelete com legumes e mandioca']]][0];
 const shoppingItems=['Arroz','Feijão','Aveia','Pão integral','Ovos','Frango, peixe ou tofu','Lentilha ou grão-de-bico','Iogurte natural','Leite ou bebida vegetal','Banana','Mamão','Maçã','Frutas da estação','Alface e outras folhas','Tomate','Cenoura','Brócolis','Abóbora','Batata ou mandioca','Castanhas'];
-const KEY='seca_saudavel_v3';let state;try{state=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){state={}};state.done=state.done||[];state.water=state.water||{};state.activity=state.activity||{};state.edits=state.edits||{};state.shopping=state.shopping||{};state.notes=state.notes||{};let selected=1;const today=()=>new Date().toLocaleDateString('en-CA');const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert('Não foi possível salvar neste navegador.')}};const data=n=>state.edits[n]||{title:themes[n-1][0],body:themes[n-1][1],mission:themes[n-1][2]};function switchTab(tab){window.scrollTo({top:document.getElementById('tabs').offsetTop-10,behavior:'smooth'});document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===tab));document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));if(tab==='progresso')renderProgress();if(tab==='academia'){renderPresetWorkout();loadGymData();loadExerciseCatalog();}}document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));function renderHome(){document.getElementById('homeCount').textContent=state.done.length+'/30';document.getElementById('bar').style.width=state.done.length/30*100+'%';document.getElementById('waterCount').textContent=(state.water[today()]||0)+' copos';document.getElementById('activity').checked=!!state.activity[today()];document.getElementById('missionTitle').textContent=data(selected).title;document.getElementById('missionText').textContent=data(selected).mission;}function waterChange(v){state.water[today()]=Math.max(0,Math.min(30,(state.water[today()]||0)+v));save();renderHome()}function saveActivity(){state.activity[today()]=document.getElementById('activity').checked;save()}function renderCalendar(){document.getElementById('calendar').innerHTML=Array.from({length:30},(_,i)=>{let n=i+1;return `<button class="${n===selected?'selected ':''}${state.done.includes(n)?'done':''}" onclick="selectDay(${n})" aria-label="Dia ${n}">${n}${state.done.includes(n)?' ✓':''}</button>`}).join('');let d=data(selected);document.getElementById('dayTag').textContent='Dia '+selected+' de 30';document.getElementById('dayTitle').textContent=d.title;document.getElementById('dayText').textContent=d.body;document.getElementById('dayMission').textContent=d.mission;document.getElementById('completeBtn').textContent=state.done.includes(selected)?'↶ Desmarcar conclusão':'✓ Concluir dia';renderHome()}function selectDay(n){selected=n;renderCalendar()}function changeDay(v){selectDay(Math.max(1,Math.min(30,selected+v)))}function completeDay(){state.done=state.done.includes(selected)?state.done.filter(n=>n!==selected):[...state.done,selected].sort((a,b)=>a-b);save();renderCalendar()}function renderMeals(){let n=Number(document.getElementById('mealSelect').value);document.getElementById('meals').innerHTML=mealPlans[(n-1)%7].map((m,i)=>`<div class="meal"><b>${['☀️ Café da manhã','🍽️ Almoço','🍎 Lanche','🌙 Jantar'][i]}</b>${m}</div>`).join('')}function caption(n){let d=data(n);return `🌿 PROJETO SECA SAUDÁVEL — DIA ${n}/30\n\n${d.title.toUpperCase()}\n\n${d.body}\n\n💚 Missão de hoje: ${d.mission}\n\nSaúde é construída com consistência, não com dietas extremas.\n\n#SecaSaudável #EmagrecimentoSaudável #VidaSaudável #AlimentaçãoEquilibrada`;}
+const LEGACY_KEY='seca_saudavel_v3';let KEY='seca_saudavel_v3_guest';function emptyAppState(){return {done:[],water:{},activity:{},edits:{},shopping:{},notes:{}}}function normalizeAppState(value){const s=value&&typeof value==='object'&&!Array.isArray(value)?value:{};return {...s,done:Array.isArray(s.done)?s.done:[],water:s.water&&typeof s.water==='object'?s.water:{},activity:s.activity&&typeof s.activity==='object'?s.activity:{},edits:s.edits&&typeof s.edits==='object'?s.edits:{},shopping:s.shopping&&typeof s.shopping==='object'?s.shopping:{},notes:s.notes&&typeof s.notes==='object'?s.notes:{}}}let state;try{state=normalizeAppState(JSON.parse(localStorage.getItem(KEY))||emptyAppState())}catch(e){state=emptyAppState()}let selected=1;const today=()=>new Date().toLocaleDateString('en-CA');const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));scheduleAppStateSync()}catch(e){alert('Não foi possível salvar neste navegador.')}};const data=n=>state.edits[n]||{title:themes[n-1][0],body:themes[n-1][1],mission:themes[n-1][2]};function switchTab(tab){window.scrollTo({top:document.getElementById('tabs').offsetTop-10,behavior:'smooth'});document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===tab));document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));if(tab==='progresso')renderProgress();if(tab==='academia'){renderPresetWorkout();loadGymData();loadExerciseCatalog();}}document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));function renderHome(){document.getElementById('homeCount').textContent=state.done.length+'/30';document.getElementById('bar').style.width=state.done.length/30*100+'%';document.getElementById('waterCount').textContent=(state.water[today()]||0)+' copos';document.getElementById('activity').checked=!!state.activity[today()];document.getElementById('missionTitle').textContent=data(selected).title;document.getElementById('missionText').textContent=data(selected).mission;}function waterChange(v){state.water[today()]=Math.max(0,Math.min(30,(state.water[today()]||0)+v));save();renderHome()}function saveActivity(){state.activity[today()]=document.getElementById('activity').checked;save()}function renderCalendar(){document.getElementById('calendar').innerHTML=Array.from({length:30},(_,i)=>{let n=i+1;return `<button class="${n===selected?'selected ':''}${state.done.includes(n)?'done':''}" onclick="selectDay(${n})" aria-label="Dia ${n}">${n}${state.done.includes(n)?' ✓':''}</button>`}).join('');let d=data(selected);document.getElementById('dayTag').textContent='Dia '+selected+' de 30';document.getElementById('dayTitle').textContent=d.title;document.getElementById('dayText').textContent=d.body;document.getElementById('dayMission').textContent=d.mission;document.getElementById('completeBtn').textContent=state.done.includes(selected)?'↶ Desmarcar conclusão':'✓ Concluir dia';renderHome()}function selectDay(n){selected=n;renderCalendar()}function changeDay(v){selectDay(Math.max(1,Math.min(30,selected+v)))}function completeDay(){state.done=state.done.includes(selected)?state.done.filter(n=>n!==selected):[...state.done,selected].sort((a,b)=>a-b);save();renderCalendar()}function renderMeals(){let n=Number(document.getElementById('mealSelect').value);document.getElementById('meals').innerHTML=mealPlans[(n-1)%7].map((m,i)=>`<div class="meal"><b>${['☀️ Café da manhã','🍽️ Almoço','🍎 Lanche','🌙 Jantar'][i]}</b>${m}</div>`).join('')}function caption(n){let d=data(n);return `🌿 PROJETO SECA SAUDÁVEL — DIA ${n}/30\n\n${d.title.toUpperCase()}\n\n${d.body}\n\n💚 Missão de hoje: ${d.mission}\n\nSaúde é construída com consistência, não com dietas extremas.\n\n#SecaSaudável #EmagrecimentoSaudável #VidaSaudável #AlimentaçãoEquilibrada`;}
 function renderPost() {
   const select = document.getElementById('postSelect');
   const text = document.getElementById('postText');
@@ -297,6 +376,7 @@ function renderPresetWorkout(){
  document.getElementById('presetWorkout').innerHTML=plan.map((p,i)=>'<div style="margin:10px 0"><b>'+escapeHtml(p[0])+'</b>'+workoutMarkup(p)+'</div>').join('');
 }
 let currentGymEmail='';
+let currentUserId=null;
 let generatedRoutine=null;
 function getRoutineExercises(days,equipment){
  const home=equipment==='corpo';
@@ -392,7 +472,7 @@ function generateGymPlan(){
  document.getElementById('gymWorkoutName').value='Treino '+(days===4?'A/B/C/D':days===3?'A/B/C':'A/B')+' — plano semanal';
 }
 let gymSyncReady=false, gymSyncTimer=null, gymSyncInFlight=false;
-function gymDataKeys(){const base=gymPlanStorageKey();return {routine:base,calendar:base+':calendar',logs:base+':logs',performance:base+':performance'}}
+function gymDataKeys(){const base=gymPlanStorageKey();return {routine:base,calendar:base+':calendar',logs:base+':logs',performance:base+':performance',bodyEvolution:base+':bodyEvolution'}}
 function collectGymData(){const keys=gymDataKeys(),out={};for(const [field,key] of Object.entries(keys)){const raw=localStorage.getItem(key);if(raw!==null){try{out[field]=JSON.parse(raw)}catch(_){}}}return out}
 function applyGymData(data){const keys=gymDataKeys();for(const [field,key] of Object.entries(keys)){if(Object.prototype.hasOwnProperty.call(data||{},field)){localStorage.setItem(key,JSON.stringify(data[field]))}else{localStorage.removeItem(key)}}}
 async function syncGymDataWithServer(){
@@ -403,6 +483,16 @@ async function syncGymDataWithServer(){
   const hasRemote=remote.data&&Object.keys(remote.data).length>0;
   if(hasRemote){applyGymData(remote.data)}
   else{const local=collectGymData();if(Object.keys(local).length)await apiRequest('/api/gym/data',{method:'PUT',body:JSON.stringify(local)})}
+  // Atualiza a meta anterior de 80 kg para a nova meta solicitada de 90 kg.
+  const bodyKey=gymDataKeys().bodyEvolution;
+  try{
+   const bodyData=JSON.parse(localStorage.getItem(bodyKey)||'{}');
+   if(Number(bodyData.targetWeight)===80){
+    bodyData.targetWeight=90;
+    localStorage.setItem(bodyKey,JSON.stringify(bodyData));
+    await apiRequest('/api/gym/data',{method:'PUT',body:JSON.stringify(collectGymData())});
+   }
+  }catch(goalError){console.warn('Não foi possível atualizar a meta de peso:',goalError.message)}
   gymSyncReady=true;
  }catch(e){gymSyncReady=false;console.warn('Sincronização da Academia indisponível:',e.message);const el=document.getElementById('accountStatus');if(el)el.textContent+=' • sincronização da Academia pendente';}
 }
@@ -465,11 +555,95 @@ function saveGymDayAssignment(){const data=readGymCalendar();const letter=docume
 function toggleGymDayDone(){const data=readGymCalendar();const wasDone=!!data.completed[gymSelectedDate];const letter=data.assignments[gymSelectedDate]??defaultGymAssignment(gymSelectedDate);try{if(wasDone){delete data.completed[gymSelectedDate];const logKey=gymPlanStorageKey()+':logs';const logs=JSON.parse(localStorage.getItem(logKey)||'[]');const dateLabel=parseLocalDate(gymSelectedDate).toLocaleDateString('pt-BR');const idx=logs.findIndex(x=>x.calendarDate===gymSelectedDate);if(idx>=0)logs.splice(idx,1);localStorage.setItem(logKey,JSON.stringify(logs));scheduleGymSync();}else{data.completed[gymSelectedDate]=new Date().toISOString();if(letter){const logKey=gymPlanStorageKey()+':logs';const logs=JSON.parse(localStorage.getItem(logKey)||'[]');if(!logs.some(x=>x.calendarDate===gymSelectedDate)){logs.unshift({date:parseLocalDate(gymSelectedDate).toLocaleDateString('pt-BR'),name:'Treino '+letter+' — concluído pelo calendário',notes:'Registrado no calendário semanal.',calendarDate:gymSelectedDate,completedAt:data.completed[gymSelectedDate]});localStorage.setItem(logKey,JSON.stringify(logs.slice(0,100)));scheduleGymSync();}}}writeGymCalendar(data);document.getElementById('gymCalendarStatus').textContent=wasDone?'Conclusão desmarcada.':'Treino marcado como concluído e adicionado ao histórico.';renderGymCalendar();loadGymHistory()}catch(e){document.getElementById('gymCalendarStatus').textContent='Não foi possível atualizar a conclusão neste navegador.'}}
 
 
+
+function bodyEvolutionStorageKey(){return gymPlanStorageKey()+':bodyEvolution'}
+function readBodyEvolution(){try{const value=JSON.parse(localStorage.getItem(bodyEvolutionStorageKey())||'{}');return {heightCm:Number(value.heightCm)||172,targetWeight:Number(value.targetWeight)||90,entries:Array.isArray(value.entries)?value.entries:[]}}catch(_){return {heightCm:172,targetWeight:80,entries:[]}}}
+function bmiCategory(value){if(value<18.5)return 'Abaixo do peso';if(value<25)return 'Faixa adequada';if(value<30)return 'Sobrepeso';if(value<35)return 'Obesidade grau I';if(value<40)return 'Obesidade grau II';return 'Obesidade grau III'}
+function renderBodyGoal(data,latestWeight){
+ const target=Number(data.targetWeight)||90,display=document.getElementById('bodyGoalWeightDisplay'),input=document.getElementById('bodyGoalWeight'),remaining=document.getElementById('bodyGoalRemaining'),progressText=document.getElementById('bodyGoalProgressText'),bar=document.getElementById('bodyGoalProgressBar');
+ if(!display)return;
+ display.textContent=target.toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg';
+ if(input&&!input.matches(':focus'))input.value=String(target);
+ if(latestWeight===null){remaining.textContent='Meta definida';progressText.textContent='Registre seu peso para acompanhar';bar.style.width='0%';return}
+ const delta=latestWeight-target;
+ if(delta>0){remaining.textContent=delta.toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg para a meta';progressText.textContent='Continue acompanhando sua evolução';}
+ else if(delta<0){remaining.textContent=Math.abs(delta).toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg abaixo da meta';progressText.textContent='Você ultrapassou a meta definida';}
+ else{remaining.textContent='Meta alcançada!';progressText.textContent='Parabéns pela conquista';}
+ const baseline=Math.max(latestWeight,98),pct=Math.max(0,Math.min(100,((baseline-latestWeight)/(baseline-target||1))*100));
+ bar.style.width=(delta<=0?100:pct)+'%';
+}
+function saveBodyGoal(event){
+ event.preventDefault();
+ if(!currentGymEmail){document.getElementById('bodyEvolutionStatus').textContent='Entre na sua conta para salvar sua meta com segurança.';return}
+ const target=Number(document.getElementById('bodyGoalWeight').value),status=document.getElementById('bodyEvolutionStatus');
+ if(!Number.isFinite(target)||target<1||target>500){status.textContent='Informe uma meta válida entre 1 e 500 kg.';return}
+ const data=readBodyEvolution();data.targetWeight=target;
+ try{localStorage.setItem(bodyEvolutionStorageKey(),JSON.stringify(data));scheduleGymSync();status.textContent='Meta de '+target.toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg salva na sua conta.';renderBodyEvolution()}
+ catch(_){status.textContent='Não foi possível salvar a meta neste navegador.'}
+}
+function renderBodyEvolution(){
+ const data=readBodyEvolution(),heightM=data.heightCm/100,entries=[...data.entries].sort((a,b)=>b.date.localeCompare(a.date));
+ const height=document.getElementById('bodyHeightDisplay'),latestWeight=document.getElementById('bodyLatestWeight'),latestBmi=document.getElementById('bodyLatestBmi'),category=document.getElementById('bodyBmiCategory'),history=document.getElementById('bodyWeightHistory'),chart=document.getElementById('bodyWeightChart'),dateInput=document.getElementById('bodyDate'),weightInput=document.getElementById('bodyWeight');
+ if(!height)return;
+ height.textContent=(data.heightCm/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' m';
+ if(dateInput&&!dateInput.value)dateInput.value=toLocalDateKey(new Date());
+ if(!entries.length){
+  latestWeight.textContent='—';latestBmi.textContent='—';category.textContent='Registre seu peso para calcular';
+  history.className='body-weight-history';history.textContent='Nenhuma pesagem registrada.';
+  if(chart){chart.innerHTML='<div class="body-weight-chart-empty">Registre sua primeira pesagem para começar o gráfico.</div>';chart.setAttribute('aria-label','Ainda não há pesagens para mostrar no gráfico.')}
+  renderBodyGoal(data,null);
+  if(weightInput&&!weightInput.value)weightInput.value='98';
+  return;
+ }
+ const current=entries[0],bmi=Number(current.weight)/(heightM*heightM);
+ renderBodyGoal(data,Number(current.weight));
+ latestWeight.textContent=Number(current.weight).toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg';
+ latestBmi.textContent=bmi.toFixed(1).replace('.',',');category.textContent=bmiCategory(bmi);
+ if(weightInput)weightInput.value='';
+ history.className='body-weight-history';
+ history.innerHTML=entries.slice(0,20).map(item=>{const value=Number(item.weight)/(heightM*heightM);return `<div class="body-weight-entry"><div><strong>${Number(item.weight).toLocaleString('pt-BR',{maximumFractionDigits:1})} kg</strong><small>${new Date(item.date+'T12:00:00').toLocaleDateString('pt-BR')}</small></div><span class="bmi-chip">IMC ${value.toFixed(1).replace('.',',')}</span></div>`}).join('');
+ if(chart){
+  const chronological=entries.slice(0,12).reverse(),maxWeight=Math.max(...chronological.map(item=>Number(item.weight)));
+  chart.innerHTML=chronological.map(item=>{const weight=Number(item.weight),heightPct=Math.max(8,Math.round(weight/maxWeight*100));const dateLabel=new Date(item.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});return `<div class="body-weight-bar" title="${dateLabel}: ${weight.toLocaleString('pt-BR',{maximumFractionDigits:1})} kg"><strong>${weight.toLocaleString('pt-BR',{maximumFractionDigits:1})} kg</strong><span style="height:${heightPct}%"></span><small>${dateLabel}</small></div>`}).join('');
+  chart.setAttribute('aria-label','Gráfico com '+chronological.length+' pesagens. Mais antiga: '+chronological[0].weight+' kg; mais recente: '+chronological[chronological.length-1].weight+' kg.');
+ }
+}
+function deleteAllBodyMeasurements(){
+ const status=document.getElementById('bodyEvolutionStatus');
+ if(!currentGymEmail){status.textContent='Entre na sua conta para excluir o histórico salvo com segurança.';return}
+ const data=readBodyEvolution();
+ if(!data.entries.length){status.textContent='Não há pesagens para excluir.';return}
+ if(!confirm('Tem certeza de que deseja excluir TODAS as pesagens e o histórico do gráfico? A meta de 90 kg e a altura serão mantidas. Esta ação não pode ser desfeita.'))return;
+ data.entries=[];
+ try{
+  localStorage.setItem(bodyEvolutionStorageKey(),JSON.stringify(data));
+  scheduleGymSync();
+  const weightInput=document.getElementById('bodyWeight');if(weightInput)weightInput.value='';
+  status.textContent='Todo o histórico de peso foi excluído da conta '+currentGymEmail+'. Sua meta e altura foram mantidas.';
+  renderBodyEvolution();
+ }catch(_){status.textContent='Não foi possível excluir o histórico. Tente novamente.'}
+}
+
+function saveBodyMeasurement(event){
+ event.preventDefault();
+ if(!currentGymEmail){document.getElementById('bodyEvolutionStatus').textContent='Entre na sua conta para salvar sua evolução física com segurança.';return}
+ const weight=Number(document.getElementById('bodyWeight').value),date=document.getElementById('bodyDate').value,status=document.getElementById('bodyEvolutionStatus');
+ if(!date||!Number.isFinite(weight)||weight<1||weight>500){status.textContent='Informe uma data e um peso válido entre 1 e 500 kg.';return}
+ const data=readBodyEvolution();data.heightCm=172;
+ const existing=data.entries.findIndex(item=>item.date===date);
+ const entry={id:existing>=0?data.entries[existing].id:(Date.now()+'-'+Math.random().toString(36).slice(2,7)),date,weight};
+ if(existing>=0)data.entries[existing]=entry;else data.entries.push(entry);
+ data.entries.sort((a,b)=>b.date.localeCompare(a.date));
+ try{localStorage.setItem(bodyEvolutionStorageKey(),JSON.stringify(data));scheduleGymSync();document.getElementById('bodyWeight').value='';status.textContent='Pesagem salva na conta '+currentGymEmail+'. O IMC foi atualizado.';renderBodyEvolution()}
+ catch(_){status.textContent='Não foi possível salvar a pesagem neste navegador.'}
+}
+
 function performanceStorageKey(){return gymPlanStorageKey()+':performance'}
 function readPerformanceEntries(){try{const v=JSON.parse(localStorage.getItem(performanceStorageKey())||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
 function loadPerformanceExerciseOptions(){const input=document.getElementById('performanceExerciseOptions');if(!input)return;const routine=getSavedGymRoutine();const names=[...new Set((routine?.sessions||[]).flatMap(x=>(x.items||[]).map(i=>i[2])).filter(Boolean))];input.innerHTML=names.map(n=>`<option value="${escapeHtml(n)}"></option>`).join('');const select=document.getElementById('performanceChartExercise');const current=select.value;const all=[...new Set(readPerformanceEntries().map(x=>x.exercise))];select.innerHTML=all.length?all.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join(''):'<option value="">Registre um exercício para ver a evolução</option>';if(all.includes(current))select.value=current;else if(all.length)select.value=all[0]}
 let editingPerformanceId=null;
-function resetPerformanceForm(){editingPerformanceId=null;const form=document.getElementById('performanceForm');form.reset();document.getElementById('performanceDate').value=toLocalDateKey(new Date());form.classList.remove('editing');document.getElementById('performanceEditActions').style.display='none';document.getElementById('performanceAddButton').style.display='';document.getElementById('performanceStatus').textContent='Edição cancelada.'}
+function resetPerformanceForm(){editingPerformanceId=null;const form=document.getElementById('performanceForm');form.reset();document.getElementById('performanceDate').value=toLocalDateKey(new Date());
+ document.getElementById('bodyDate').value=toLocalDateKey(new Date());form.classList.remove('editing');document.getElementById('performanceEditActions').style.display='none';document.getElementById('performanceAddButton').style.display='';document.getElementById('performanceStatus').textContent='Edição cancelada.'}
 function editPerformanceEntry(id){const entry=readPerformanceEntries().find(x=>x.id===id);if(!entry)return;editingPerformanceId=id;document.getElementById('performanceExercise').value=entry.exercise;document.getElementById('performanceDate').value=entry.date;document.getElementById('performanceSets').value=entry.sets;document.getElementById('performanceReps').value=entry.reps;document.getElementById('performanceLoad').value=entry.load;document.getElementById('performanceRest').value=entry.rest||0;document.getElementById('performanceNotes').value=entry.notes||'';document.getElementById('performanceForm').classList.add('editing');document.getElementById('performanceEditActions').style.display='flex';document.getElementById('performanceAddButton').style.display='none';document.getElementById('performanceSubmitButton').textContent='Salvar alterações';document.getElementById('performanceStatus').textContent='Editando registro. Altere os campos e salve.';document.getElementById('performanceForm').scrollIntoView({behavior:'smooth',block:'center'})}
 function savePerformanceEntry(event){event.preventDefault();const exercise=document.getElementById('performanceExercise').value.trim();const date=document.getElementById('performanceDate').value;const sets=Number(document.getElementById('performanceSets').value);const reps=Number(document.getElementById('performanceReps').value);const load=Number(document.getElementById('performanceLoad').value);const rest=Number(document.getElementById('performanceRest').value||0);const notes=document.getElementById('performanceNotes').value.trim();const status=document.getElementById('performanceStatus');if(!exercise||!date||!Number.isFinite(sets)||!Number.isFinite(reps)||!Number.isFinite(load)||sets<1||reps<1||load<0){status.textContent='Confira o exercício, a data, as séries, as repetições e a carga.';return}try{const entries=readPerformanceEntries();if(editingPerformanceId){const idx=entries.findIndex(x=>x.id===editingPerformanceId);if(idx>=0)entries[idx]={...entries[idx],exercise,date,sets,reps,load,rest,notes,updatedAt:new Date().toISOString()};status.textContent='Registro atualizado com sucesso.'}else{entries.unshift({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise,date,sets,reps,load,rest,notes,createdAt:new Date().toISOString()});status.textContent='Desempenho salvo com sucesso neste navegador.'}localStorage.setItem(performanceStorageKey(),JSON.stringify(entries.slice(0,500)));scheduleGymSync();editingPerformanceId=null;document.getElementById('performanceForm').reset();document.getElementById('performanceDate').value=toLocalDateKey(new Date());document.getElementById('performanceForm').classList.remove('editing');document.getElementById('performanceEditActions').style.display='none';document.getElementById('performanceAddButton').style.display='';loadPerformanceExerciseOptions();document.getElementById('performanceChartExercise').value=exercise;renderPerformance()}catch(e){status.textContent='Não foi possível salvar. Verifique o espaço disponível no navegador.'}}
 function deletePerformanceEntry(id){if(!confirm('Excluir este registro de desempenho?'))return;const entries=readPerformanceEntries().filter(x=>x.id!==id);localStorage.setItem(performanceStorageKey(),JSON.stringify(entries));scheduleGymSync();if(editingPerformanceId===id)resetPerformanceForm();loadPerformanceExerciseOptions();renderPerformance()}
@@ -479,7 +653,7 @@ function renderPerformanceInsights(entries){const now=toLocalDateKey(new Date())
 function renderPerformance(){const entries=readPerformanceEntries();const chosen=document.getElementById('performanceChartExercise')?.value||'';const count=document.getElementById('performanceCount');if(!count)return;count.textContent=entries.length;const volume=entries.reduce((sum,x)=>sum+(Number(x.load)||0)*(Number(x.sets)||0)*(Number(x.reps)||0),0);document.getElementById('performanceVolume').textContent=Math.round(volume).toLocaleString('pt-BR')+' kg';const best=entries.reduce((m,x)=>Math.max(m,Number(x.load)||0),0);document.getElementById('performanceBest').textContent=entries.length?best.toLocaleString('pt-BR')+' kg':'—';renderPerformanceInsights(entries);const history=document.getElementById('performanceHistory');if(!entries.length){history.className='performance-empty';history.textContent='Nenhum desempenho registrado ainda.'}else{history.className='performance-log';history.innerHTML=entries.slice(0,20).map(x=>`<div class="performance-entry"><div><strong>${escapeHtml(x.exercise)}</strong><small>${new Date(x.date+'T12:00:00').toLocaleDateString('pt-BR')} • ${x.sets} séries × ${x.reps} repetições • ${Number(x.load).toLocaleString('pt-BR')} kg • descanso ${x.rest||0}s${x.notes?' • '+escapeHtml(x.notes):''}</small></div><div class="performance-entry-actions"><button type="button" class="secondary" onclick="editPerformanceEntry('${x.id}')">Editar</button><button type="button" class="secondary" onclick="deletePerformanceEntry('${x.id}')">Excluir</button></div></div>`).join('')}
  const chart=document.getElementById('performanceChart');const series=entries.filter(x=>x.exercise===chosen).sort((a,b)=>a.date.localeCompare(b.date));if(!series.length){chart.className='performance-empty';chart.textContent='Selecione um exercício com registros para visualizar a evolução.';return}chart.className='performance-chart';const max=Math.max(1,...series.map(x=>Number(x.load)||0));chart.innerHTML=series.slice(-12).map(x=>{const value=Number(x.load)||0;const height=Math.max(4,value/max*100);return `<div class="performance-bar" title="${escapeHtml(x.date)}: ${value} kg"><b>${value.toLocaleString('pt-BR')}</b><i style="height:${height}%"></i><small>${x.date.slice(5).split('-').reverse().join('/')}</small></div>`}).join('')}
 
-function loadGymData(){renderSavedRoutine();loadGymHistory();renderGymCalendar();loadPerformanceExerciseOptions();renderPerformance()}
+function loadGymData(){renderSavedRoutine();loadGymHistory();renderGymCalendar();loadPerformanceExerciseOptions();renderPerformance();renderBodyEvolution()}
 
 document.getElementById('performanceDate').value=toLocalDateKey(new Date());
 for (let n = 1; n <= 30; n++) {
@@ -500,14 +674,122 @@ for (let n = 1; n <= 30; n++) {
 
 renderCalendar();renderMeals();renderPresetWorkout();renderPost();renderShopping();loadEditor();renderProgress();loadGymData();
 async function apiRequest(url, options={}){if(location.protocol==='file:')throw new Error('Você abriu o arquivo direto no computador (file://). O cadastro precisa do servidor: inicie o backend e acesse pelo endereço dele (ex.: http://localhost:3000).');let response;try{response=await fetch(url,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}})}catch(e){throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.')}let data={};try{data=await response.json()}catch(e){}if(!response.ok){if(!data.error&&[404,405,501].includes(response.status))throw new Error('A API ('+url+') não foi encontrada neste endereço. O site está hospedado sem o backend?');throw new Error(data.error||'Não foi possível concluir a solicitação.')}return data}
+let appStateSyncReady = false;
+let appStateSyncTimer = null;
+let appStateSyncInFlight = false;
+let appStateSyncAgain = false;
+
+async function syncAppStateWithServer(){
+  if(!currentUserId)return;
+  appStateSyncReady=false;
+  try{
+    const remote=await apiRequest('/api/app-state');
+    if(remote.state && typeof remote.state === 'object' && !Array.isArray(remote.state)){
+      state=normalizeAppState(remote.state);
+    }else{
+      // Conta sem dados na nuvem: começa vazia. Nunca copia o localStorage global/legado,
+      // pois ele pode pertencer a outra conta usada neste mesmo navegador.
+      state=emptyAppState();
+      await apiRequest('/api/app-state',{method:'PUT',body:JSON.stringify({state})});
+    }
+    localStorage.setItem(KEY,JSON.stringify(state));
+    renderCalendar();renderShopping();renderProgress();renderMeals();
+    appStateSyncReady=true;
+  }catch(e){
+    appStateSyncReady=false;
+    console.warn('Sincronização dos dados gerais pendente:',e.message);
+    const el=document.getElementById('accountStatus');
+    if(el)el.textContent+=' • sincronização do desafio pendente';
+  }
+}
+
+function scheduleAppStateSync(){
+  if(!currentGymEmail || !appStateSyncReady)return;
+  clearTimeout(appStateSyncTimer);
+  appStateSyncTimer=setTimeout(async()=>{
+    if(appStateSyncInFlight){appStateSyncAgain=true;return;}
+    appStateSyncInFlight=true;
+    try{
+      await apiRequest('/api/app-state',{method:'PUT',body:JSON.stringify({state})});
+    }catch(e){
+      console.warn('Não foi possível sincronizar os dados gerais:',e.message);
+      const el=document.getElementById('accountStatus');
+      if(el)el.textContent='Conectado • sincronização dos dados do desafio pendente';
+    }finally{
+      appStateSyncInFlight=false;
+      if(appStateSyncAgain){appStateSyncAgain=false;scheduleAppStateSync();}
+    }
+  },500);
+}
+
 function accountMessage(text,targetId,type){const el=document.getElementById('accountMessage');if(el)el.textContent=text;if(targetId){const t=document.getElementById(targetId);if(t){t.textContent=text;t.className='auth-msg '+(type||'')}}}
 async function withBusy(formId,fn){const btn=document.querySelector('#'+formId+' button[type=submit]');const label=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Aguarde...'}try{await fn()}finally{if(btn){btn.disabled=false;btn.textContent=label}}}
+function showForgotPassword(){
+  const box=document.getElementById('forgotPasswordBox');
+  box.hidden=!box.hidden;
+  if(!box.hidden){
+    const current=document.getElementById('loginEmail').value.trim();
+    document.getElementById('forgotEmail').value=current;
+    document.getElementById('forgotEmail').focus();
+  }
+}
+async function requestPasswordReset(){
+  const email=document.getElementById('forgotEmail').value.trim();
+  const msg=document.getElementById('forgotMessage');
+  msg.textContent='';
+  if(!email||!document.getElementById('forgotEmail').checkValidity()){
+    msg.textContent='Digite um e-mail válido.';
+    msg.className='auth-msg error';
+    return;
+  }
+  const btn=document.querySelector('#forgotPasswordForm button[type=submit]');
+  btn.disabled=true;btn.textContent='Enviando...';
+  try{
+    const result=await apiRequest('/api/auth/forgot-password',{method:'POST',body:JSON.stringify({email})});
+    msg.textContent=result.message||'Se o e-mail estiver cadastrado, enviaremos um link de recuperação.';
+    msg.className='auth-msg ok';
+  }catch(e){
+    msg.textContent=e.message;
+    msg.className='auth-msg error';
+  }finally{btn.disabled=false;btn.textContent='Enviar link de recuperação';}
+}
+async function submitNewPassword(){
+  const token=new URLSearchParams(location.search).get('resetToken')||'';
+  const password=document.getElementById('newPassword').value;
+  const confirm=document.getElementById('confirmNewPassword').value;
+  const msg=document.getElementById('resetMessage');
+  if(password.length<10){msg.textContent='A senha precisa ter pelo menos 10 caracteres.';msg.className='auth-msg error';return;}
+  if(password!==confirm){msg.textContent='As senhas não coincidem.';msg.className='auth-msg error';return;}
+  const btn=document.querySelector('#resetPasswordForm button[type=submit]');
+  btn.disabled=true;btn.textContent='Salvando...';
+  try{
+    const result=await apiRequest('/api/auth/reset-password',{method:'POST',body:JSON.stringify({token,password})});
+    msg.textContent=result.message||'Senha alterada. Você já pode entrar.';
+    msg.className='auth-msg ok';
+    document.getElementById('resetPasswordForm').reset();
+    history.replaceState({},document.title,location.pathname);
+    setTimeout(()=>{document.getElementById('resetPasswordBox').hidden=true;document.getElementById('loginEmail').focus();},1800);
+  }catch(e){
+    msg.textContent=e.message;
+    msg.className='auth-msg error';
+  }finally{btn.disabled=false;btn.textContent='Salvar nova senha';}
+}
+function initializePasswordReset(){
+  const token=new URLSearchParams(location.search).get('resetToken');
+  if(token){
+    switchTab('conta');
+    document.getElementById('forgotPasswordBox').hidden=true;
+    document.getElementById('resetPasswordBox').hidden=false;
+    document.getElementById('resetPasswordBox').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
 async function accountRegister(){const name=document.getElementById('registerName').value.trim(),email=document.getElementById('registerEmail').value.trim(),password=document.getElementById('registerPassword').value;if(name.length<2||!email||!password)return accountMessage('Preencha nome, e-mail e senha.','registerMessage','error');if(!document.getElementById('registerEmail').checkValidity())return accountMessage('Digite um e-mail válido.','registerMessage','error');if(password.length<10)return accountMessage('A senha precisa ter pelo menos 10 caracteres.','registerMessage','error');await withBusy('registerForm',async()=>{try{const data=await apiRequest('/api/auth/register',{method:'POST',body:JSON.stringify({name,email,password})});accountMessage('Conta criada. Bem-vindo(a), '+(data.user?.name||name)+'!','registerMessage','ok');document.getElementById('registerForm').reset();await refreshAccount()}catch(e){accountMessage(e.message,'registerMessage','error')}})}
 async function accountLogin(){const email=document.getElementById('loginEmail').value.trim(),password=document.getElementById('loginPassword').value;if(!email||!password)return accountMessage('Informe e-mail e senha.','loginMessage','error');await withBusy('loginForm',async()=>{try{await apiRequest('/api/auth/login',{method:'POST',body:JSON.stringify({email,password})});accountMessage('Login realizado.','loginMessage','ok');document.getElementById('loginPassword').value='';await refreshAccount()}catch(e){accountMessage(e.message,'loginMessage','error')}})}
 async function accountLogout(){try{await apiRequest('/api/auth/logout',{method:'POST'});accountMessage('Você saiu da sua conta.');await refreshAccount()}catch(e){accountMessage(e.message)}}
-async function refreshAccount(){try{const data=await apiRequest('/api/me');const status=document.getElementById('accountStatus');const premium=document.getElementById('premiumArea');const btn=document.getElementById('premiumButton');const welcome=document.getElementById('userWelcome');const greeting=document.getElementById('userGreeting');const planBadge=document.getElementById('userPlanBadge');if(!data.user){welcome.hidden=true;gymSyncReady=false;currentGymEmail='';status.textContent='Você está no plano gratuito. Entre ou crie uma conta para assinar.';premium.hidden=true;btn.disabled=true;btn.textContent='Entre ou cadastre-se para assinar';loadGymData();return}currentGymEmail=data.user.email||'';await syncGymDataWithServer();const firstName=String(data.user.name||'').trim().split(/\\s+/)[0]||'bem-vindo(a)';const hour=new Date().getHours();const period=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';greeting.textContent=period+', '+firstName+'!';planBadge.textContent=data.premium?'PREMIUM ATIVO':'PLANO GRATUITO';welcome.hidden=false;status.textContent='Conectado como '+data.user.email+' • Plano: '+(data.premium?'Premium ativo':'Gratuito');loadGymData();btn.disabled=data.premium;if(data.premium){btn.textContent='Assinatura Premium ativa';premium.hidden=false;try{const content=await apiRequest('/api/premium/content');document.getElementById('premiumContent').innerHTML='<p>'+content.benefits.map(x=>'• '+escapeHtml(x)).join('<br>')+'</p>'}catch(e){document.getElementById('premiumContent').textContent=e.message}}else{btn.disabled=false;btn.textContent='Assinar Premium — R$ 19,90/mês';premium.hidden=true}}catch(e){document.getElementById('accountStatus').textContent='Não foi possível consultar sua conta. O servidor está iniciado?';}}
+async function refreshAccount(){try{const data=await apiRequest('/api/me');const status=document.getElementById('accountStatus');const premium=document.getElementById('premiumArea');const btn=document.getElementById('premiumButton');const welcome=document.getElementById('userWelcome');const greeting=document.getElementById('userGreeting');const planBadge=document.getElementById('userPlanBadge');if(!data.user){welcome.hidden=true;gymSyncReady=false;appStateSyncReady=false;currentGymEmail='';currentUserId=null;KEY='seca_saudavel_v3_guest';state=emptyAppState();localStorage.setItem(KEY,JSON.stringify(state));renderCalendar();renderShopping();renderProgress();status.textContent='Você está no plano gratuito. Entre ou crie uma conta para assinar.';premium.hidden=true;btn.disabled=true;btn.textContent='Entre ou cadastre-se para assinar';loadGymData();return}currentGymEmail=data.user.email||'';currentUserId=data.user.id;KEY='seca_saudavel_v3_user_'+String(currentUserId);try{state=normalizeAppState(JSON.parse(localStorage.getItem(KEY))||emptyAppState())}catch(_){state=emptyAppState()}renderCalendar();renderShopping();renderProgress();await syncGymDataWithServer();await syncAppStateWithServer();const firstName=String(data.user.name||'').trim().split(/\s+/)[0]||'bem-vindo(a)';const hour=new Date().getHours();const period=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';greeting.textContent=period+', '+firstName+'!';planBadge.textContent=data.premium?'PREMIUM ATIVO':'PLANO GRATUITO';welcome.hidden=false;status.textContent='Conectado como '+data.user.email+' • Plano: '+(data.premium?'Premium ativo':'Gratuito');loadGymData();btn.disabled=data.premium;if(data.premium){btn.textContent='Assinatura Premium ativa';premium.hidden=false;try{const content=await apiRequest('/api/premium/content');document.getElementById('premiumContent').innerHTML='<p>'+content.benefits.map(x=>'• '+escapeHtml(x)).join('<br>')+'</p>'}catch(e){document.getElementById('premiumContent').textContent=e.message}}else{btn.disabled=false;btn.textContent='Assinar Premium — R$ 19,90/mês';premium.hidden=true}}catch(e){document.getElementById('accountStatus').textContent='Não foi possível consultar sua conta. O servidor está iniciado?';}}
+
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function startPremium(){try{const data=await apiRequest('/api/subscription/checkout',{method:'POST',body:JSON.stringify({})});window.location.href=data.checkoutUrl}catch(e){accountMessage(e.message)}}
-refreshAccount();if(new URLSearchParams(location.search).has('assinatura')){switchTab('conta');accountMessage('Retorno do Mercado Pago recebido. A confirmação pode levar alguns instantes; clique em Atualizar status.')}
+refreshAccount();initializePasswordReset();if(new URLSearchParams(location.search).has('assinatura')){switchTab('conta');accountMessage('Retorno do Mercado Pago recebido. A confirmação pode levar alguns instantes; clique em Atualizar status.')}
 
 </script></body></html>
