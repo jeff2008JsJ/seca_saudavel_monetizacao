@@ -174,14 +174,26 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
     ].filter(Boolean).join('\n\n');
     let response;
     let data = {};
-    const maxAttempts = 3;
+    const maxAttempts = 2;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-        method: 'POST',
-        headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-        body: JSON.stringify({ model: NUTRI_MODEL, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 900 } }),
-        signal: AbortSignal.timeout(45000)
-      });
+      try {
+        response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+          method: 'POST',
+          headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
+          body: JSON.stringify({ model: NUTRI_MODEL, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 600 } }),
+          signal: AbortSignal.timeout(60000)
+        });
+      } catch (fetchError) {
+        const timedOut = fetchError?.name === 'TimeoutError' || fetchError?.name === 'AbortError';
+        console.error('Falha de comunicação com Gemini:', fetchError?.name || 'Erro', fetchError?.message || '', 'Tentativa:', attempt, '/', maxAttempts);
+        if (!timedOut || attempt === maxAttempts) {
+          throw new Error(timedOut
+            ? 'A Nutri IA demorou para responder. Tente novamente em alguns minutos.'
+            : 'Não foi possível conectar à Nutri IA. Tente novamente em instantes.');
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        continue;
+      }
       data = await response.json().catch(() => ({}));
       if (response.ok) break;
 
@@ -198,7 +210,7 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
         apiError.status = response.status;
         throw apiError;
       }
-      const waitMs = 1200 * (2 ** (attempt - 1));
+      const waitMs = 1500 * attempt;
       await new Promise(resolve => setTimeout(resolve, waitMs));
     }
     const answer = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
