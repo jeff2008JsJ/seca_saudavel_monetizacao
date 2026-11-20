@@ -11,6 +11,7 @@ const path = require('path');
 
 const app = express();
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/hero-boas-vindas-github.jpg', (_req, res) => res.sendFile(path.join(__dirname, 'hero-boas-vindas-github.jpg')));
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL não está configurada no arquivo .env.');
