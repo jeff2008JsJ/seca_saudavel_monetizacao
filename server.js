@@ -750,7 +750,52 @@ app.get('/api/premium/content', requireAuth, async (req, res) => {
         'Biblioteca premium de receitas e materiais',
         'Novos desafios mensais',
         'Materiais extras para organização alimentar'
-      ]
+      ],
+      monthlyChallenge: {
+        title: 'Desafio do prato colorido',
+        duration: '7 dias',
+        description: 'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
+        steps: [
+          'Dia 1: escolha uma fruta para incluir no dia.',
+          'Dia 2: acrescente um vegetal de outra cor.',
+          'Dia 3: experimente uma preparação diferente.',
+          'Dia 4: monte uma lista curta de alimentos coloridos.',
+          'Dia 5: prepare uma refeição simples em casa.',
+          'Dia 6: varie uma fruta ou legume que costuma consumir.',
+          'Dia 7: observe quais combinações gostou e gostaria de repetir.'
+        ]
+      },
+      recipes: [
+        {
+          title: 'Bowl de frango, arroz e legumes',
+          category: 'Almoço',
+          time: '25 minutos',
+          ingredients: ['Frango em cubos', 'Arroz cozido', 'Cenoura', 'Brócolis', 'Azeite, alho e limão'],
+          preparation: 'Tempere e cozinhe o frango. Refogue rapidamente os legumes. Sirva com arroz e finalize com limão.'
+        },
+        {
+          title: 'Omelete colorida',
+          category: 'Café da manhã ou jantar',
+          time: '10 minutos',
+          ingredients: ['2 ovos', 'Tomate picado', 'Espinafre ou cheiro-verde', 'Cebola', 'Azeite'],
+          preparation: 'Bata os ovos, misture os vegetais e cozinhe em frigideira untada até firmar dos dois lados.'
+        },
+        {
+          title: 'Salada de grão-de-bico',
+          category: 'Almoço ou acompanhamento',
+          time: '15 minutos',
+          ingredients: ['Grão-de-bico cozido', 'Tomate', 'Pepino', 'Cebola roxa', 'Limão e azeite'],
+          preparation: 'Misture os ingredientes picados, tempere com limão e azeite e mantenha refrigerado até servir.'
+        },
+        {
+          title: 'Iogurte com fruta e aveia',
+          category: 'Lanche',
+          time: '5 minutos',
+          ingredients: ['Iogurte natural', 'Banana ou outra fruta', 'Aveia', 'Canela (opcional)'],
+          preparation: 'Coloque o iogurte em uma tigela, acrescente a fruta picada, a aveia e a canela.'
+        }
+      ],
+      note: 'Receitas gerais e adaptáveis. Ajuste ingredientes às suas preferências, alergias e necessidades individuais.'
     });
   } catch (error) {
     console.error('Erro ao verificar conteúdo Premium:', error);
