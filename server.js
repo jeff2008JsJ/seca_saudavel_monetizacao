@@ -751,20 +751,64 @@ app.get('/api/premium/content', requireAuth, async (req, res) => {
         'Novos desafios mensais',
         'Materiais extras para organização alimentar'
       ],
-      monthlyChallenge: {
-        title: 'Desafio do prato colorido',
-        duration: '7 dias',
-        description: 'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
-        steps: [
-          'Dia 1: escolha uma fruta para incluir no dia.',
-          'Dia 2: acrescente um vegetal de outra cor.',
-          'Dia 3: experimente uma preparação diferente.',
-          'Dia 4: monte uma lista curta de alimentos coloridos.',
-          'Dia 5: prepare uma refeição simples em casa.',
-          'Dia 6: varie uma fruta ou legume que costuma consumir.',
-          'Dia 7: observe quais combinações gostou e gostaria de repetir.'
-        ]
-      },
+      monthlyChallenges: [
+        {
+          title: 'Desafio do prato colorido',
+          duration: '7 dias',
+          description: 'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
+          steps: [
+            'Dia 1: escolha uma fruta para incluir no dia.',
+            'Dia 2: acrescente um vegetal de outra cor.',
+            'Dia 3: experimente uma preparação diferente.',
+            'Dia 4: monte uma lista curta de alimentos coloridos.',
+            'Dia 5: prepare uma refeição simples em casa.',
+            'Dia 6: varie uma fruta ou legume que costuma consumir.',
+            'Dia 7: observe quais combinações gostou e gostaria de repetir.'
+          ]
+        },
+        {
+          title: 'Desafio da hidratação consciente',
+          duration: '7 dias',
+          description: 'Observe sua rotina de hidratação e crie lembretes simples para beber água ao longo do dia, respeitando suas necessidades individuais.',
+          steps: [
+            'Dia 1: observe em quais momentos costuma beber água.',
+            'Dia 2: deixe uma garrafa ou copo de água em local visível.',
+            'Dia 3: associe um copo de água a uma pausa da rotina.',
+            'Dia 4: leve água quando sair de casa.',
+            'Dia 5: faça uma pausa para beber água durante o trabalho ou estudo.',
+            'Dia 6: perceba quais lembretes funcionam melhor para você.',
+            'Dia 7: escolha um hábito simples de hidratação para manter.'
+          ]
+        },
+        {
+          title: 'Desafio do planejamento alimentar',
+          duration: '7 dias',
+          description: 'Organize pequenas escolhas para facilitar as refeições da semana, sem regras rígidas ou cobranças.',
+          steps: [
+            'Dia 1: anote algumas refeições de que você gosta.',
+            'Dia 2: confira os alimentos que já tem em casa.',
+            'Dia 3: monte uma lista simples de compras.',
+            'Dia 4: escolha uma preparação prática para adiantar.',
+            'Dia 5: organize opções simples para os próximos dias.',
+            'Dia 6: experimente uma combinação diferente com o que tem disponível.',
+            'Dia 7: revise o que facilitou sua rotina e planeje a próxima semana.'
+          ]
+        },
+        {
+          title: 'Desafio dos hábitos equilibrados',
+          duration: '7 dias',
+          description: 'Experimente pequenas atitudes de bem-estar que possam caber na sua rotina, sem buscar perfeição.',
+          steps: [
+            'Dia 1: reserve alguns minutos para uma refeição sem distrações.',
+            'Dia 2: inclua uma pausa de descanso na rotina.',
+            'Dia 3: escolha uma atividade leve de que goste.',
+            'Dia 4: tente manter um horário regular para dormir.',
+            'Dia 5: faça uma refeição com atenção aos sinais de fome e saciedade.',
+            'Dia 6: reconheça uma escolha positiva que fez por você.',
+            'Dia 7: escolha um hábito possível para continuar praticando.'
+          ]
+        }
+      ],
       recipes: [
         {
           title: 'Bowl de frango, arroz e legumes',
