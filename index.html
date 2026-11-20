@@ -882,11 +882,20 @@ async function accountLogout(){try{await apiRequest('/api/auth/logout',{method:'
 async function refreshAccount(){try{const data=await apiRequest('/api/me');const status=document.getElementById('accountStatus');const premium=document.getElementById('premiumArea');const btn=document.getElementById('premiumButton');const welcome=document.getElementById('userWelcome');const greeting=document.getElementById('userGreeting');const planBadge=document.getElementById('userPlanBadge');if(!data.user){welcome.hidden=true;gymSyncReady=false;appStateSyncReady=false;currentGymEmail='';currentUserId=null;KEY='seca_saudavel_v3_guest';state=emptyAppState();localStorage.setItem(KEY,JSON.stringify(state));renderCalendar();renderShopping();renderProgress();status.textContent='Você está no plano gratuito. Entre ou crie uma conta para assinar.';premium.hidden=true;btn.disabled=true;btn.textContent='Entre ou cadastre-se para assinar';loadGymData();return}currentGymEmail=data.user.email||'';currentUserId=data.user.id;KEY='seca_saudavel_v3_user_'+String(currentUserId);try{state=normalizeAppState(JSON.parse(localStorage.getItem(KEY))||emptyAppState())}catch(_){state=emptyAppState()}renderCalendar();renderShopping();renderProgress();await syncGymDataWithServer();await syncAppStateWithServer();const firstName=String(data.user.name||'').trim().split(/\s+/)[0]||'bem-vindo(a)';const hour=new Date().getHours();const period=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';greeting.textContent=period+', '+firstName+'!';planBadge.textContent=data.premium?'PREMIUM ATIVO':'PLANO GRATUITO';welcome.hidden=false;status.textContent='Conectado como '+data.user.email+' • Plano: '+(data.premium?'Premium ativo':'Gratuito');loadGymData();btn.disabled=data.premium;if(data.premium){btn.textContent='Assinatura Premium ativa';premium.hidden=false;try{const content=await apiRequest('/api/premium/content');window.premiumContentData=content;renderPremiumContent(content);}catch(e){document.getElementById('premiumContent').textContent=e.message}}else{btn.disabled=false;btn.textContent='Assinar Premium — R$ 19,90/mês';premium.hidden=true}}catch(e){document.getElementById('accountStatus').textContent='Não foi possível consultar sua conta. O servidor está iniciado?';}}
 
 
+function getCurrentPremiumChallenge(content){
+ const challenges=content&&content.monthlyChallenges;
+ if(Array.isArray(challenges)&&challenges.length){
+  const history=state.premiumChallengeHistory||[];
+  return challenges[history.length%challenges.length];
+ }
+ return content&&content.monthlyChallenge||{steps:[]};
+}
+
 function renderPremiumContent(content){
  const favorites=state.premiumFavorites||[];
  const completed=state.premiumChallengeDone||[];
  const recipes=content.recipes||[];
- const challenge=content.monthlyChallenge||{steps:[]};
+ const challenge=getCurrentPremiumChallenge(content);
  const percent=challenge.steps.length?Math.round(completed.length/challenge.steps.length*100):0;
  document.getElementById('premiumContent').innerHTML=
  '<section class="premium-favorites-area"><div class="premium-favorites-heading"><div><h4>♥ Minhas receitas favoritas</h4><p>Suas receitas salvas ficam reunidas aqui.</p></div><span class="premium-favorite-count">'+favorites.length+' salvas</span></div>'+(favorites.length?'<div class="premium-favorites-list">'+favorites.filter(i=>recipes[i]).map(i=>'<article class="premium-favorite-item"><div><strong>'+escapeHtml(recipes[i].title)+'</strong><small>'+escapeHtml(recipes[i].category)+' • '+escapeHtml(recipes[i].time)+'</small></div><button type="button" class="secondary" onclick="document.getElementById(\'premium-recipe-'+i+'\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})">Ver receita</button></article>').join('')+'</div>':'<p class="premium-favorites-empty">Você ainda não salvou receitas. Clique em “♡ Favoritar receita” em uma receita para guardá-la aqui.</p>')+'</section>'+
@@ -911,7 +920,7 @@ function togglePremiumChallengeDay(index,checked){
 
 function archivePremiumChallenge(){
  const content=window.premiumContentData;
- const challenge=content&&content.monthlyChallenge;
+ const challenge=content&&getCurrentPremiumChallenge(content);
  if(!challenge||!challenge.steps||state.premiumChallengeDone.length!==challenge.steps.length)return;
  const history=state.premiumChallengeHistory||(state.premiumChallengeHistory=[]);
  history.push({title:challenge.title,completedAt:new Date().toLocaleDateString('pt-BR'),days:state.premiumChallengeDone.length});
