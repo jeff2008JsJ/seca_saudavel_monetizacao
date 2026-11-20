@@ -174,45 +174,75 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
     ].filter(Boolean).join('\n\n');
     let response;
     let data = {};
-    const maxAttempts = 2;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-          method: 'POST',
-          headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-          body: JSON.stringify({ model: NUTRI_MODEL, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 600 } }),
-          signal: AbortSignal.timeout(60000)
-        });
-      } catch (fetchError) {
-        const timedOut = fetchError?.name === 'TimeoutError' || fetchError?.name === 'AbortError';
-        console.error('Falha de comunicação com Gemini:', fetchError?.name || 'Erro', fetchError?.message || '', 'Tentativa:', attempt, '/', maxAttempts);
-        if (!timedOut || attempt === maxAttempts) {
-          throw new Error(timedOut
-            ? 'A Nutri IA demorou para responder. Tente novamente em alguns minutos.'
-            : 'Não foi possível conectar à Nutri IA. Tente novamente em instantes.');
+    const modelsToTry = [
+      { name: NUTRI_MODEL, attempts: 2 },
+      { name: 'gemini-3.5-flash-lite', attempts: 2 }
+    ];
+    let successfulModel = null;
+    let lastProviderStatus = null;
+
+    for (const modelConfig of modelsToTry) {
+      let shouldFallback = false;
+      for (let attempt = 1; attempt <= modelConfig.attempts; attempt++) {
+        try {
+          response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+            method: 'POST',
+            headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
+            body: JSON.stringify({ model: modelConfig.name, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 600 } }),
+            signal: AbortSignal.timeout(60000)
+          });
+        } catch (fetchError) {
+          const timedOut = fetchError?.name === 'TimeoutError' || fetchError?.name === 'AbortError';
+          console.error('Falha de comunicação com Gemini:', modelConfig.name, fetchError?.name || 'Erro', fetchError?.message || '', 'Tentativa:', attempt, '/', modelConfig.attempts);
+          if (!timedOut || attempt === modelConfig.attempts) {
+            shouldFallback = true;
+            lastProviderStatus = timedOut ? 'timeout' : 'network';
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          continue;
         }
-        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        data = await response.json().catch(() => ({}));
+        if (response.ok) {
+          successfulModel = modelConfig.name;
+          break;
+        }
+
+        lastProviderStatus = response.status;
+        const retryable = response.status === 429 || response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504;
+        console.error('Gemini API respondeu com erro HTTP:', response.status, JSON.stringify(data?.error || data).slice(0, 1500), 'Modelo:', modelConfig.name, 'Tentativa:', attempt, '/', modelConfig.attempts);
+
+        if (!retryable) {
+          const apiError = new Error(response.status === 401 || response.status === 403
+            ? 'A configuração de acesso à Nutri IA precisa ser verificada.'
+            : 'A Nutri IA não conseguiu processar sua pergunta agora.');
+          apiError.status = response.status;
+          throw apiError;
+        }
+        if (attempt === modelConfig.attempts) {
+          shouldFallback = true;
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+      }
+
+      if (successfulModel) break;
+      if (shouldFallback && modelConfig.name !== modelsToTry[modelsToTry.length - 1].name) {
+        console.warn('Acionando modelo alternativo da Nutri IA após falha no modelo principal:', modelConfig.name);
         continue;
       }
-      data = await response.json().catch(() => ({}));
-      if (response.ok) break;
-
-      const retryable = response.status === 429 || response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504;
-      console.error('Gemini API respondeu com erro HTTP:', response.status, JSON.stringify(data?.error || data).slice(0, 1500), 'Tentativa:', attempt, '/', maxAttempts);
-      if (!retryable || attempt === maxAttempts) {
-        const unavailable = response.status === 503 || response.status === 502 || response.status === 504;
-        const message = unavailable
-          ? 'A Nutri IA está temporariamente com alta demanda. Tente novamente em alguns minutos.'
-          : response.status === 429
-            ? 'A IA está temporariamente com muitas solicitações. Tente novamente em alguns instantes.'
-            : 'A Nutri IA não conseguiu responder agora. Tente novamente em instantes.';
-        const apiError = new Error(message);
-        apiError.status = response.status;
-        throw apiError;
-      }
-      const waitMs = 1500 * attempt;
-      await new Promise(resolve => setTimeout(resolve, waitMs));
     }
+
+    if (!successfulModel) {
+      const message = lastProviderStatus === 'timeout'
+        ? 'A Nutri IA está demorando para responder. Tente novamente em alguns minutos.'
+        : lastProviderStatus === 'network'
+          ? 'Não foi possível conectar à Nutri IA. Tente novamente em instantes.'
+          : 'A Nutri IA está temporariamente indisponível. Tente novamente em alguns minutos.';
+      throw new Error(message);
+    }
+    console.info('Nutri IA respondeu usando o modelo:', successfulModel);
     const answer = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
     if (!answer) throw new Error('A IA retornou uma resposta vazia. Tente novamente.');
     const used = quotaCount;
