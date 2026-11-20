@@ -172,16 +172,34 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
       historyText ? 'Contexto recente: ' + historyText : '',
       'Pergunta atual do usuário: ' + question
     ].filter(Boolean).join('\n\n');
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-      method: 'POST',
-      headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-      body: JSON.stringify({ model: NUTRI_MODEL, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 900 } }),
-      signal: AbortSignal.timeout(45000)
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      console.error('Gemini API respondeu com erro HTTP:', response.status, JSON.stringify(data?.error || data).slice(0, 1500));
-      throw new Error(response.status === 429 ? 'A IA está temporariamente com muitas solicitações. Tente novamente em alguns instantes.' : 'A Nutri IA não conseguiu responder agora. Tente novamente em instantes.');
+    let response;
+    let data = {};
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+        method: 'POST',
+        headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
+        body: JSON.stringify({ model: NUTRI_MODEL, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 900 } }),
+        signal: AbortSignal.timeout(45000)
+      });
+      data = await response.json().catch(() => ({}));
+      if (response.ok) break;
+
+      const retryable = response.status === 429 || response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504;
+      console.error('Gemini API respondeu com erro HTTP:', response.status, JSON.stringify(data?.error || data).slice(0, 1500), 'Tentativa:', attempt, '/', maxAttempts);
+      if (!retryable || attempt === maxAttempts) {
+        const unavailable = response.status === 503 || response.status === 502 || response.status === 504;
+        const message = unavailable
+          ? 'A Nutri IA está temporariamente com alta demanda. Tente novamente em alguns minutos.'
+          : response.status === 429
+            ? 'A IA está temporariamente com muitas solicitações. Tente novamente em alguns instantes.'
+            : 'A Nutri IA não conseguiu responder agora. Tente novamente em instantes.';
+        const apiError = new Error(message);
+        apiError.status = response.status;
+        throw apiError;
+      }
+      const waitMs = 1200 * (2 ** (attempt - 1));
+      await new Promise(resolve => setTimeout(resolve, waitMs));
     }
     const answer = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
     if (!answer) throw new Error('A IA retornou uma resposta vazia. Tente novamente.');
