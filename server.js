@@ -136,7 +136,7 @@ async function obterLimiteNutri(userId) {
 app.get('/api/nutri/status', requireAuth, async (req, res) => {
   try {
     const { premium, limit } = await obterLimiteNutri(req.session.userId);
-    const usage = await pool.query('SELECT question_count FROM public.nutri_ai_usage WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date', [req.session.userId]);
+    const usage = await pool.query(`SELECT question_count FROM public.nutri_ai_usage WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`, [req.session.userId]);
     const used = Number(usage.rows[0]?.question_count || 0);
     return res.json({ premium, used, limit, remaining: Math.max(0, limit - used) });
   } catch (error) {
@@ -154,7 +154,7 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
   try {
     const { premium, limit } = await obterLimiteNutri(req.session.userId);
     const quota = await pool.query(
-      'INSERT INTO public.nutri_ai_usage (user_id, usage_date, question_count) VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET question_count = public.nutri_ai_usage.question_count + 1 WHERE public.nutri_ai_usage.question_count < $2 RETURNING question_count',
+      `INSERT INTO public.nutri_ai_usage (user_id, usage_date, question_count) VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET question_count = public.nutri_ai_usage.question_count + 1 WHERE public.nutri_ai_usage.question_count < $2 RETURNING question_count`,
       [req.session.userId, limit]
     );
     if (!quota.rows[0]) return res.status(429).json({ error: premium ? 'Você atingiu as 30 perguntas de hoje. Seu limite será renovado amanhã.' : 'Você atingiu as 5 perguntas gratuitas de hoje. O limite será renovado amanhã.', used: limit, limit, remaining: 0, premium });
