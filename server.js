@@ -751,6 +751,20 @@ app.get('/api/premium/content', requireAuth, async (req, res) => {
         'Novos desafios mensais',
         'Materiais extras para organização alimentar'
       ],
+      monthlyChallenge: {
+        title: 'Desafio do prato colorido',
+        duration: '7 dias',
+        description: 'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
+        steps: [
+          'Dia 1: escolha uma fruta para incluir no dia.',
+          'Dia 2: acrescente um vegetal de outra cor.',
+          'Dia 3: experimente uma preparação diferente.',
+          'Dia 4: monte uma lista curta de alimentos coloridos.',
+          'Dia 5: prepare uma refeição simples em casa.',
+          'Dia 6: varie uma fruta ou legume que costuma consumir.',
+          'Dia 7: observe quais combinações gostou e gostaria de repetir.'
+        ]
+      },
       monthlyChallenges: [
         {
           title: 'Desafio do prato colorido',
