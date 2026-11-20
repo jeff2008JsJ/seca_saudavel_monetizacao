@@ -460,25 +460,40 @@ app.post('/api/gym/ai-plan', requireAuth, async (req, res) => {
         'Crie um plano geral de exercícios para um adulto, em português brasileiro. Seja conservador e seguro.',
         'Não faça diagnóstico nem prescreva reabilitação. Não recomende treinar com dor, cargas máximas, exercícios perigosos ou progressão agressiva. Priorize aquecimento, técnica, descanso e adaptação gradual. Se limitações ou condições tornarem a prescrição insegura, não gere exercícios específicos: explique que é necessária avaliação de profissional de saúde/educação física.',
         'Retorne SOMENTE JSON válido, sem markdown, no formato: {"title":"...","schedule":["Segunda — A"],"sessions":[{"title":"Treino A","focus":"...","exercises":[{"name":"...","muscle":"...","sets":"2","reps":"8–12","rest":"60–90 segundos","notes":"..."}]}],"safety":"..."}',
-        'Crie exatamente ' + days + ' sessões semanais. Máximo 6 exercícios por sessão. Use dias de descanso entre sessões sempre que possível.',
+        'Crie exatamente ' + days + ' sessões semanais. Máximo 4 exercícios por sessão. Use dias de descanso entre sessões sempre que possível.',
         'Objetivo: ' + goal, 'Nível: ' + level, 'Equipamentos: ' + equipment,
         age ? 'Idade: ' + age : '', limitations ? 'Limitações informadas pelo usuário: ' + limitations : 'Nenhuma limitação informada.',
         'Não invente dados pessoais. Se faltar informação, mantenha o plano básico e seguro.'
       ].filter(Boolean).join('\n');
       let result = null, lastError = null;
-      for (const model of ['gemini-3.5-flash-lite', NUTRI_MODEL]) {
+      const workoutModels = [
+        { name: 'gemini-3.5-flash-lite', thinking: 'minimal' },
+        { name: NUTRI_MODEL, thinking: 'low' }
+      ];
+      for (const modelConfig of workoutModels) {
+        const model = modelConfig.name;
         try {
           const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
             method: 'POST',
             headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-            body: JSON.stringify({ model, input: prompt, generation_config: { thinking_level: 'minimal', max_output_tokens: 1100 } }),
-            signal: AbortSignal.timeout(45000)
+            body: JSON.stringify({
+              model,
+              input: prompt + '\\n\\nIMPORTANTE: produza JSON completo e válido, sem texto antes ou depois. Use no máximo 4 exercícios por sessão e frases curtas para evitar truncamento.',
+              generation_config: { thinking_level: modelConfig.thinking, max_output_tokens: 2400 }
+            }),
+            signal: AbortSignal.timeout(60000)
           });
           const data = await response.json().catch(() => ({}));
           if (response.ok) {
-            const raw = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
-            const cleaned = raw.replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
-            result = JSON.parse(cleaned);
+            const raw = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\\n')).trim();
+            const cleaned = raw.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '');
+            try {
+              result = JSON.parse(cleaned);
+            } catch (parseError) {
+              lastError = parseError;
+              console.error('A resposta do modelo não veio como JSON completo:', model, parseError.message, 'Caracteres recebidos:', cleaned.length);
+              continue;
+            }
             break;
           }
           lastError = new Error('Gemini HTTP ' + response.status);
