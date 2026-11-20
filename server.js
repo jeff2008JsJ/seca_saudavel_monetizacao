@@ -151,6 +151,8 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
   if (question.length < 2) return res.status(400).json({ error: 'Digite uma pergunta para a Nutri IA.' });
   const history = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
   const safeHistory = history.map(item => ({ role: item?.role === 'assistant' ? 'Nutri IA' : 'Usuário', text: String(item?.content || '').trim().slice(0, 1200) })).filter(item => item.text);
+  let quotaCounted = false;
+  let quotaCount = 0;
   try {
     const { premium, limit } = await obterLimiteNutri(req.session.userId);
     const quota = await pool.query(
@@ -158,6 +160,8 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
       [req.session.userId, limit]
     );
     if (!quota.rows[0]) return res.status(429).json({ error: premium ? 'Você atingiu as 30 perguntas de hoje. Seu limite será renovado amanhã.' : 'Você atingiu as 5 perguntas gratuitas de hoje. O limite será renovado amanhã.', used: limit, limit, remaining: 0, premium });
+    quotaCounted = true;
+    quotaCount = Number(quota.rows[0].question_count);
     const historyText = safeHistory.map(item => item.role + ': ' + item.text).join(' | ');
     const prompt = [
       'Você é a Nutri IA, assistente educativa do Projeto Seca Saudável. Responda sempre em português brasileiro, com linguagem acolhedora, simples, objetiva e sem julgamentos.',
@@ -176,14 +180,21 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      console.error('Gemini API respondeu com erro HTTP:', response.status, data?.error?.status || data?.error?.code || 'sem código');
+      console.error('Gemini API respondeu com erro HTTP:', response.status, JSON.stringify(data?.error || data).slice(0, 1500));
       throw new Error(response.status === 429 ? 'A IA está temporariamente com muitas solicitações. Tente novamente em alguns instantes.' : 'A Nutri IA não conseguiu responder agora. Tente novamente em instantes.');
     }
     const answer = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
     if (!answer) throw new Error('A IA retornou uma resposta vazia. Tente novamente.');
-    const used = Number(quota.rows[0].question_count);
+    const used = quotaCount;
     return res.json({ answer, used, limit, remaining: Math.max(0, limit - used), premium });
   } catch (error) {
+    if (quotaCounted) {
+      try {
+        await pool.query(`UPDATE public.nutri_ai_usage SET question_count = GREATEST(question_count - 1, 0) WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`, [req.session.userId]);
+      } catch (refundError) {
+        console.error('Não foi possível devolver a pergunta da Nutri IA:', refundError.message);
+      }
+    }
     console.error('Erro na Nutri IA:', error.message);
     return res.status(502).json({ error: error.message || 'Não foi possível consultar a Nutri IA.' });
   }
