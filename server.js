@@ -508,7 +508,7 @@ app.post('/api/gym/ai-plan', requireAuth, async (req, res) => {
       result.sessions = result.sessions.slice(0, days).map(session => ({
         title: String(session.title || 'Treino').slice(0, 100),
         focus: String(session.focus || '').slice(0, 180),
-        exercises: (Array.isArray(session.exercises) ? session.exercises : []).slice(0, 6).map(ex => ({
+        exercises: (Array.isArray(session.exercises) ? session.exercises : []).slice(0, 4).map(ex => ({
           name: String(ex.name || '').slice(0, 100), muscle: String(ex.muscle || '').slice(0, 60),
           sets: String(ex.sets || '2').slice(0, 20), reps: String(ex.reps || '8–12').slice(0, 30),
           rest: String(ex.rest || '60–90 s').slice(0, 40), notes: String(ex.notes || '').slice(0, 180)
