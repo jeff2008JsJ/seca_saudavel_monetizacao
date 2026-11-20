@@ -133,7 +133,9 @@
     <label for="gymLevel">Seu nível de experiência</label><select id="gymLevel"><option value="iniciante">Estou começando</option><option value="intermediario">Já tenho experiência</option><option value="avancado">Tenho bastante experiência</option></select>
     <label for="gymDays">Quantos dias por semana?</label><select id="gymDays"><option value="2">2 dias</option><option value="3" selected>3 dias</option><option value="4">4 dias</option></select>
     <label for="gymEquipment">Quais equipamentos você tem?</label><select id="gymEquipment"><option value="academia">Academia completa</option><option value="halteres">Halteres e elásticos</option><option value="corpo">Somente peso corporal</option></select>
-    <button class="gym-action" onclick="generateGymPlan()">✨ Gerar minha sugestão</button>
+    <label for="gymAge">Sua idade (opcional)</label><input id="gymAge" type="number" min="18" max="100" placeholder="Ex.: 35">
+    <label for="gymLimitations">Lesões, dores ou limitações que a IA deve considerar (opcional)</label><textarea id="gymLimitations" rows="2" maxlength="500" placeholder="Ex.: desconforto no joelho; se não houver, deixe em branco."></textarea>
+    <div class="row" style="flex-wrap:wrap"><button type="button" class="gym-action" onclick="generateAIGymPlan()">🤖 Montar treino com IA</button><button type="button" class="secondary" onclick="generateGymPlan()">Gerar sugestão simples</button></div>
     <div id="customWorkout" class="notice gym-plan-output" style="margin-top:14px" aria-live="polite">Sua sugestão aparecerá aqui depois de preencher as opções.</div>
     <div id="routineBuilder" class="routine-builder" hidden>
       <div class="gym-divider"></div>
@@ -482,6 +484,31 @@ function generateGymPlan(){
  document.getElementById('routineSaveStatus').textContent='Revise os movimentos e salve o plano para mantê-lo neste navegador.';
  document.getElementById('gymWorkoutName').value='Treino '+(days===4?'A/B/C/D':days===3?'A/B/C':'A/B')+' — plano semanal';
 }
+async function generateAIGymPlan(){
+ const status=document.getElementById('customWorkout'),button=document.querySelector('button[onclick="generateAIGymPlan()"]');
+ const payload={goal:document.getElementById('gymGoal').value,level:document.getElementById('gymLevel').value,days:Number(document.getElementById('gymDays').value),equipment:document.getElementById('gymEquipment').value,age:Number(document.getElementById('gymAge').value)||null,limitations:document.getElementById('gymLimitations').value.trim()};
+ if(!currentUserId){status.textContent='Entre na sua conta para gerar um treino com IA.';switchTab('conta');return}
+ button.disabled=true;button.textContent='Montando seu treino...';status.textContent='A IA está preparando uma rotina. Isso pode levar alguns segundos.';
+ try{
+  const result=await apiRequest('/api/gym/ai-plan',{method:'POST',body:JSON.stringify(payload)});
+  renderAIWorkoutPlan(result.plan,true);
+  const q=document.getElementById('nutriQuota');if(q)loadNutriStatus();
+ }catch(e){status.textContent=e.message||'Não foi possível gerar o treino agora.'}
+ finally{button.disabled=false;button.textContent='🤖 Montar treino com IA'}
+}
+function renderAIWorkoutPlan(plan,created){
+ const goal=document.getElementById('gymGoal').value,level=document.getElementById('gymLevel').value,days=Number(document.getElementById('gymDays').value),equipment=document.getElementById('gymEquipment').value;
+ const sessions=(plan.sessions||[]).slice(0,4).map((session,index)=>({letter:['A','B','C','D'][index],title:String(session.title||('Treino '+['A','B','C','D'][index])),focus:String(session.focus||''),items:(session.exercises||[]).slice(0,8).map(ex=>[String(ex.muscle||''),String(ex.muscle||''),String(ex.name||''),String(ex.sets||'2'),String(ex.reps||'8–12'),String(ex.rest||'60–90 s'),String(ex.notes||'')])}));
+ const schedule=(plan.schedule||[]).slice(0,sessions.length);
+ generatedRoutine={goal,level,days,equipment,sessions,schedule,aiPlan:plan,createdAt:new Date().toISOString()};
+ document.getElementById('customWorkout').textContent='Treino personalizado criado pela IA. Revise os exercícios e as orientações antes de começar.';
+ document.getElementById('routineSchedule').innerHTML=schedule.map(x=>'<span>'+escapeHtml(String(x))+'</span>').join('');
+ document.getElementById('routineDays').innerHTML=sessions.map(session=>'<article class="routine-day"><h4>'+escapeHtml(session.title)+'</h4><div class="routine-focus">'+escapeHtml(session.focus)+'</div>'+session.items.map(item=>'<div class="routine-exercise"><div><strong>'+escapeHtml(item[2])+'</strong><small>'+escapeHtml(item[3])+' séries • '+escapeHtml(item[4])+' repetições • '+escapeHtml(item[5])+'</small><small>'+escapeHtml(item[6])+'</small></div><button type="button" onclick="openExerciseByName(\''+escapeHtml(item[2]).replace(/'/g,"\\'")+'\')">Ver exercício</button></div>').join('')+'</article>').join('');
+ document.getElementById('routineBuilder').hidden=false;
+ document.getElementById('routineSaveStatus').textContent='Confira se os exercícios são adequados. Salve o plano para usar no calendário e no histórico.';
+ document.getElementById('gymWorkoutName').value='Treino IA — plano semanal';
+ if(created)document.getElementById('routineBuilder').scrollIntoView({behavior:'smooth',block:'start'});
+}
 let gymSyncReady=false, gymSyncTimer=null, gymSyncInFlight=false;
 function gymDataKeys(){const base=gymPlanStorageKey();return {routine:base,calendar:base+':calendar',logs:base+':logs',performance:base+':performance',bodyEvolution:base+':bodyEvolution'}}
 function collectGymData(){const keys=gymDataKeys(),out={};for(const [field,key] of Object.entries(keys)){const raw=localStorage.getItem(key);if(raw!==null){try{out[field]=JSON.parse(raw)}catch(_){}}}return out}
@@ -529,7 +556,7 @@ function renderSavedRoutine(){
  try{const saved=JSON.parse(localStorage.getItem(gymPlanStorageKey())||'null');if(!saved){target.textContent='Nenhum plano salvo para esta conta neste navegador.';return}target.innerHTML=`<b>${saved.days} dias por semana</b> • ${escapeHtml(saved.goal)} • ${escapeHtml(saved.equipment)}<p class="muted">Plano salvo em ${new Date(saved.createdAt).toLocaleDateString('pt-BR')}.</p><button type="button" class="secondary" onclick="restoreSavedRoutine()">Carregar plano salvo</button>`}catch(e){target.textContent='Não foi possível ler o plano salvo.'}
 }
 function restoreSavedRoutine(){
- try{const saved=JSON.parse(localStorage.getItem(gymPlanStorageKey())||'null');if(!saved)return;document.getElementById('gymGoal').value=saved.goal;document.getElementById('gymLevel').value=saved.level;document.getElementById('gymDays').value=String(saved.days);document.getElementById('gymEquipment').value=saved.equipment;generateGymPlan();document.getElementById('routineSaveStatus').textContent='Plano salvo carregado.'}catch(e){document.getElementById('routineSaveStatus').textContent='Não foi possível carregar o plano.'}
+ try{const saved=JSON.parse(localStorage.getItem(gymPlanStorageKey())||'null');if(!saved)return;document.getElementById('gymGoal').value=saved.goal;document.getElementById('gymLevel').value=saved.level;document.getElementById('gymDays').value=String(saved.days);document.getElementById('gymEquipment').value=saved.equipment;if(saved.aiPlan){renderAIWorkoutPlan(saved.aiPlan,false)}else{generateGymPlan()}document.getElementById('routineSaveStatus').textContent='Plano salvo carregado.'}catch(e){document.getElementById('routineSaveStatus').textContent='Não foi possível carregar o plano.'}
 }
 function printGeneratedRoutine(){if(!generatedRoutine){document.getElementById('routineSaveStatus').textContent='Gere um plano antes de imprimir.';return}window.print()}
 async function openExerciseByName(name){
