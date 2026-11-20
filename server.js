@@ -438,6 +438,80 @@ app.post('/api/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
+app.post('/api/gym/ai-plan', requireAuth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: 'A IA ainda não está configurada no servidor.' });
+  const goal = String(req.body?.goal || 'condicionamento').slice(0, 40);
+  const level = String(req.body?.level || 'iniciante').slice(0, 30);
+  const days = Math.max(2, Math.min(4, Number(req.body?.days) || 3));
+  const equipment = String(req.body?.equipment || 'academia').slice(0, 30);
+  const age = Number(req.body?.age);
+  const limitations = String(req.body?.limitations || '').trim().slice(0, 500);
+  if (age && (age < 18 || age > 100)) return res.status(400).json({ error: 'Informe uma idade válida entre 18 e 100 anos.' });
+  try {
+    const { premium, limit } = await obterLimiteNutri(req.session.userId);
+    const quota = await pool.query(
+      `INSERT INTO public.nutri_ai_usage (user_id, usage_date, question_count) VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET question_count = public.nutri_ai_usage.question_count + 1 WHERE public.nutri_ai_usage.question_count < $2 RETURNING question_count`,
+      [req.session.userId, limit]
+    );
+    if (!quota.rows[0]) return res.status(429).json({ error: premium ? 'Você atingiu as 30 utilizações de IA de hoje.' : 'Você atingiu as 5 utilizações gratuitas de IA de hoje.' });
+    let counted = true;
+    try {
+      const prompt = [
+        'Crie um plano geral de exercícios para um adulto, em português brasileiro. Seja conservador e seguro.',
+        'Não faça diagnóstico nem prescreva reabilitação. Não recomende treinar com dor, cargas máximas, exercícios perigosos ou progressão agressiva. Priorize aquecimento, técnica, descanso e adaptação gradual. Se limitações ou condições tornarem a prescrição insegura, não gere exercícios específicos: explique que é necessária avaliação de profissional de saúde/educação física.',
+        'Retorne SOMENTE JSON válido, sem markdown, no formato: {"title":"...","schedule":["Segunda — A"],"sessions":[{"title":"Treino A","focus":"...","exercises":[{"name":"...","muscle":"...","sets":"2","reps":"8–12","rest":"60–90 segundos","notes":"..."}]}],"safety":"..."}',
+        'Crie exatamente ' + days + ' sessões semanais. Máximo 6 exercícios por sessão. Use dias de descanso entre sessões sempre que possível.',
+        'Objetivo: ' + goal, 'Nível: ' + level, 'Equipamentos: ' + equipment,
+        age ? 'Idade: ' + age : '', limitations ? 'Limitações informadas pelo usuário: ' + limitations : 'Nenhuma limitação informada.',
+        'Não invente dados pessoais. Se faltar informação, mantenha o plano básico e seguro.'
+      ].filter(Boolean).join('\n');
+      let result = null, lastError = null;
+      for (const model of ['gemini-3.5-flash-lite', NUTRI_MODEL]) {
+        try {
+          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+            method: 'POST',
+            headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
+            body: JSON.stringify({ model, input: prompt, generation_config: { thinking_level: 'minimal', max_output_tokens: 1100 } }),
+            signal: AbortSignal.timeout(45000)
+          });
+          const data = await response.json().catch(() => ({}));
+          if (response.ok) {
+            const raw = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
+            const cleaned = raw.replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
+            result = JSON.parse(cleaned);
+            break;
+          }
+          lastError = new Error('Gemini HTTP ' + response.status);
+          console.error('Erro ao gerar treino com Gemini:', response.status, JSON.stringify(data?.error || data).slice(0, 1000), model);
+          if (![429, 500, 502, 503, 504].includes(response.status)) break;
+        } catch (error) {
+          lastError = error;
+          console.error('Falha no modelo de treino:', model, error.message);
+        }
+      }
+      if (!result || !Array.isArray(result.sessions) || result.sessions.length !== days) throw lastError || new Error('A IA não retornou um plano válido.');
+      result.sessions = result.sessions.slice(0, days).map(session => ({
+        title: String(session.title || 'Treino').slice(0, 100),
+        focus: String(session.focus || '').slice(0, 180),
+        exercises: (Array.isArray(session.exercises) ? session.exercises : []).slice(0, 6).map(ex => ({
+          name: String(ex.name || '').slice(0, 100), muscle: String(ex.muscle || '').slice(0, 60),
+          sets: String(ex.sets || '2').slice(0, 20), reps: String(ex.reps || '8–12').slice(0, 30),
+          rest: String(ex.rest || '60–90 s').slice(0, 40), notes: String(ex.notes || '').slice(0, 180)
+        })).filter(ex => ex.name)
+      }));
+      result.schedule = (Array.isArray(result.schedule) ? result.schedule : []).slice(0, days).map(x => String(x).slice(0, 60));
+      result.safety = String(result.safety || 'Interrompa se sentir dor e procure orientação profissional quando necessário.').slice(0, 500);
+      return res.json({ plan: result, premium, limit, remaining: Math.max(0, limit - Number(quota.rows[0].question_count)) });
+    } catch (error) {
+      if (counted) await pool.query(`UPDATE public.nutri_ai_usage SET question_count = GREATEST(question_count - 1, 0) WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`, [req.session.userId]).catch(refundError => console.error('Falha ao devolver utilização de IA:', refundError.message));
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erro ao montar treino com IA:', error.message);
+    return res.status(502).json({ error: 'Não foi possível montar o treino agora. Tente novamente em instantes.' });
+  }
+});
+
 app.get('/api/gym/data', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
