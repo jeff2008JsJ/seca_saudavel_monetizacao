@@ -123,6 +123,71 @@ async function activeSub(userId) {
   return result.rows[0] || null;
 }
 
+const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
+const NUTRI_FREE_LIMIT = 5;
+const NUTRI_PREMIUM_LIMIT = 30;
+const NUTRI_MODEL = 'gemini-3.8-flash';
+
+async function obterLimiteNutri(userId) {
+  const premium = !!(await activeSub(userId));
+  return { premium, limit: premium ? NUTRI_PREMIUM_LIMIT : NUTRI_FREE_LIMIT };
+}
+
+app.get('/api/nutri/status', requireAuth, async (req, res) => {
+  try {
+    const { premium, limit } = await obterLimiteNutri(req.session.userId);
+    const usage = await pool.query('SELECT question_count FROM public.nutri_ai_usage WHERE user_id = $1 AND usage_date = CURRENT_DATE', [req.session.userId]);
+    const used = Number(usage.rows[0]?.question_count || 0);
+    return res.json({ premium, used, limit, remaining: Math.max(0, limit - used) });
+  } catch (error) {
+    console.error('Erro ao consultar limite da Nutri IA:', error);
+    return res.status(500).json({ error: 'Não foi possível consultar o limite da Nutri IA.' });
+  }
+});
+
+app.post('/api/nutri/chat', requireAuth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: 'A inteligência artificial ainda não está configurada no servidor.' });
+  const question = String(req.body?.message || '').trim().slice(0, 1200);
+  if (question.length < 2) return res.status(400).json({ error: 'Digite uma pergunta para a Nutri IA.' });
+  const history = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
+  const safeHistory = history.map(item => ({ role: item?.role === 'assistant' ? 'Nutri IA' : 'Usuário', text: String(item?.content || '').trim().slice(0, 1200) })).filter(item => item.text);
+  try {
+    const { premium, limit } = await obterLimiteNutri(req.session.userId);
+    const quota = await pool.query(
+      'INSERT INTO public.nutri_ai_usage (user_id, usage_date, question_count) VALUES ($1, CURRENT_DATE, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET question_count = public.nutri_ai_usage.question_count + 1 WHERE public.nutri_ai_usage.question_count < $2 RETURNING question_count',
+      [req.session.userId, limit]
+    );
+    if (!quota.rows[0]) return res.status(429).json({ error: premium ? 'Você atingiu as 30 perguntas de hoje. Seu limite será renovado amanhã.' : 'Você atingiu as 5 perguntas gratuitas de hoje. O limite será renovado amanhã.', used: limit, limit, remaining: 0, premium });
+    const historyText = safeHistory.map(item => item.role + ': ' + item.text).join(' | ');
+    const prompt = [
+      'Você é a Nutri IA, assistente educativa do Projeto Seca Saudável. Responda sempre em português brasileiro, com linguagem acolhedora, simples, objetiva e sem julgamentos.',
+      'Ajude com informações gerais sobre alimentação equilibrada, hábitos saudáveis, hidratação e atividade física segura.',
+      'Não diagnostique doenças, não prescreva dietas clínicas, medicamentos, suplementos ou metas agressivas de perda de peso. Não substitua médico, nutricionista ou educador físico.',
+      'Quando houver gravidez, doença, transtorno alimentar, uso de medicamentos ou sintomas preocupantes, oriente procurar um profissional de saúde. Em emergência, oriente procurar atendimento imediato.',
+      'Não prometa emagrecimento rápido nem recomende jejum extremo, restrição severa ou práticas perigosas. Se não souber, diga claramente.',
+      historyText ? 'Contexto recente: ' + historyText : '',
+      'Pergunta atual do usuário: ' + question
+    ].filter(Boolean).join('\n\n');
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
+      body: JSON.stringify({ model: NUTRI_MODEL, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 900 } }),
+      signal: AbortSignal.timeout(45000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('Gemini API respondeu com erro HTTP:', response.status, data?.error?.status || data?.error?.code || 'sem código');
+      throw new Error(response.status === 429 ? 'A IA está temporariamente com muitas solicitações. Tente novamente em alguns instantes.' : 'A Nutri IA não conseguiu responder agora. Tente novamente em instantes.');
+    }
+    const answer = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
+    if (!answer) throw new Error('A IA retornou uma resposta vazia. Tente novamente.');
+    const used = Number(quota.rows[0].question_count);
+    return res.json({ answer, used, limit, remaining: Math.max(0, limit - used), premium });
+  } catch (error) {
+    console.error('Erro na Nutri IA:', error.message);
+    return res.status(502).json({ error: error.message || 'Não foi possível consultar a Nutri IA.' });
+  }
+});
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   const name = String(req.body.name || '').trim().slice(0, 80);
   const email = String(req.body.email || '').trim().toLowerCase().slice(0, 190);
@@ -784,6 +849,14 @@ async function iniciar() {
   `);
   await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON public.password_reset_tokens(user_id)');
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS public.nutri_ai_usage (
+      user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+      usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      question_count INTEGER NOT NULL DEFAULT 0 CHECK (question_count >= 0),
+      PRIMARY KEY (user_id, usage_date)
+    )
+  `);
   // Testa a conexão antes de abrir a aplicação.
   const check = await pool.query('SELECT 1');
   if (check.rowCount !== 1) throw new Error('Não foi possível validar a conexão com o Supabase.');
