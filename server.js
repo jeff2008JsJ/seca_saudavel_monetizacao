@@ -8,7 +8,6 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const nodemailer = require('nodemailer');
 
 const app = express();
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -39,15 +38,44 @@ if (/localhost|127\.0\.0\.1/i.test(MP_WEBHOOK_URL)) {
 const PRICE = 19.90;
 const isProd = process.env.NODE_ENV === 'production';
 
-// Envio de e-mails de recuperação via Gmail (Senha de app no .env).
-const emailUser = String(process.env.EMAIL_USER || '').trim();
-const emailAppPassword = String(process.env.EMAIL_APP_PASSWORD || '').replace(/\\s+/g, '');
-const mailTransporter = emailUser && emailAppPassword
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: emailUser, pass: emailAppPassword }
+// Envio de e-mails de recuperação pela API HTTPS do Resend.
+const resendApiKey = String(process.env.RESEND_API_KEY || '').trim();
+const resendFromEmail = String(process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev').trim();
+
+async function enviarEmailRecuperacao({ to, subject, text, html }) {
+  if (!resendApiKey) {
+    throw new Error('RESEND_API_KEY não está configurada.');
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: `Projeto Seca Saudável <${resendFromEmail}>`,
+      to: [to],
+      subject,
+      text,
+      html
     })
-  : null;
+  });
+
+  const responseText = await response.text();
+  let data = {};
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch (_) {
+    throw new Error(`Resposta inválida do Resend (HTTP ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Resend: ${data.message || data.error || `HTTP ${response.status}`}`);
+  }
+
+  return data;
+}
 
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
@@ -165,8 +193,8 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Informe um endereço de e-mail válido.' });
   }
-  if (!mailTransporter) {
-    console.error('Recuperação de senha indisponível: configure EMAIL_USER e EMAIL_APP_PASSWORD no .env.');
+  if (!resendApiKey) {
+    console.error('Recuperação de senha indisponível: configure RESEND_API_KEY na Render.');
     return res.status(503).json({ error: 'O envio de e-mails ainda não está configurado. Tente novamente mais tarde.' });
   }
 
@@ -195,8 +223,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
     }[ch]));
 
     try {
-      await mailTransporter.sendMail({
-        from: `"Projeto Seca Saudável" <${emailUser}>`,
+      await enviarEmailRecuperacao({
         to: user.email,
         subject: 'Redefinição de senha — Projeto Seca Saudável',
         text: `Olá, ${user.name || 'usuário'}!\\n\\nRecebemos uma solicitação para redefinir a senha da sua conta. Acesse este link em até 30 minutos:\\n${resetUrl}\\n\\nSe você não solicitou a alteração, ignore este e-mail.`,
@@ -209,7 +236,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         [tokenHash]
       );
       console.error('Falha ao enviar e-mail de recuperação:', mailError.message);
-      return res.status(502).json({ error: 'Não foi possível enviar o e-mail agora. Confira a configuração do Gmail e tente novamente.' });
+      return res.status(502).json({ error: 'Não foi possível enviar o e-mail agora. Confira a configuração do Resend e tente novamente.' });
     }
 
     return res.json({ ok: true, message: genericMessage });
