@@ -899,8 +899,19 @@ function getCurrentPremiumChallenge(content){
  };
  const challenges=content&&content.monthlyChallenges;
  if(Array.isArray(challenges)&&challenges.length){
-  const history=state.premiumChallengeHistory||[];
-  const selected=challenges[history.length%challenges.length];
+  const now=new Date();
+  const period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  if(state.premiumChallengePeriod!==period){
+   state.premiumChallengePeriod=period;
+   state.premiumChallengeDone=[];
+   save();
+  }
+  // Novembro/2026 permanece no terceiro desafio já exibido; depois avança a cada mês.
+  const anchorYear=2026,anchorMonth=10,anchorIndex=2;
+  const monthNumber=now.getFullYear()*12+now.getMonth();
+  const anchorNumber=anchorYear*12+anchorMonth;
+  const index=((anchorIndex+(monthNumber-anchorNumber))%challenges.length+challenges.length)%challenges.length;
+  const selected=challenges[index];
   if(selected&&Array.isArray(selected.steps))return selected;
  }
  const legacy=content&&content.monthlyChallenge;
@@ -939,7 +950,7 @@ function archivePremiumChallenge(){
  const challenge=content&&getCurrentPremiumChallenge(content);
  if(!challenge||!challenge.steps||state.premiumChallengeDone.length!==challenge.steps.length)return;
  const history=state.premiumChallengeHistory||(state.premiumChallengeHistory=[]);
- history.push({title:challenge.title,completedAt:new Date().toLocaleDateString('pt-BR'),days:state.premiumChallengeDone.length});
+ history.push({title:challenge.title,completedAt:new Date().toLocaleDateString('pt-BR'),period:state.premiumChallengePeriod||'',days:state.premiumChallengeDone.length});
  state.premiumChallengeDone=[];
  save();
  renderPremiumContent(content);
