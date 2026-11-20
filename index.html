@@ -564,7 +564,9 @@ async function openExerciseByName(name){
  if(!window.exerciseCatalogLoaded)await loadExerciseCatalog();
  const wanted=String(name).toLocaleLowerCase('pt-BR');let index=exerciseCatalog.findIndex(x=>x.name.toLocaleLowerCase('pt-BR')===wanted);if(index<0)index=exerciseCatalog.findIndex(x=>x.name.toLocaleLowerCase('pt-BR').includes(wanted)||wanted.includes(x.name.toLocaleLowerCase('pt-BR')));
  if(index>=0){openExerciseDetail(index);return}
- document.getElementById('exerciseSearch').value=name;filterExercises();document.getElementById('exerciseLibraryStatus').textContent='Não encontramos uma ficha exata no catálogo. Você pode pesquisar uma demonstração pelo botão abaixo.';document.getElementById('exerciseLibraryStatus').hidden=false;document.getElementById('exerciseSearch').scrollIntoView({behavior:'smooth',block:'center'});switchTab('academia');
+ switchTab('academia');
+ document.getElementById('exerciseSearch').value=name;filterExercises();document.getElementById('exerciseLibraryStatus').textContent='Não encontramos uma ficha exata no catálogo. Você pode pesquisar uma demonstração pelo botão abaixo.';document.getElementById('exerciseLibraryStatus').hidden=false;
+ setTimeout(()=>document.getElementById('exerciseSearch').scrollIntoView({behavior:'smooth',block:'center'}),220);
 }
 function loadGymHistory(){
  const target=document.getElementById('gymHistory');if(!target)return;
