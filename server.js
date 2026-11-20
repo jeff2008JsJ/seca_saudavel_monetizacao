@@ -175,8 +175,8 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
     let response;
     let data = {};
     const modelsToTry = [
-      { name: NUTRI_MODEL, attempts: 2 },
-      { name: 'gemini-3.5-flash-lite', attempts: 2 }
+      { name: 'gemini-3.5-flash-lite', attempts: 1 },
+      { name: NUTRI_MODEL, attempts: 1 }
     ];
     let successfulModel = null;
     let lastProviderStatus = null;
@@ -188,8 +188,8 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
           response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
             method: 'POST',
             headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-            body: JSON.stringify({ model: modelConfig.name, input: prompt, generation_config: { thinking_level: 'low', max_output_tokens: 600 } }),
-            signal: AbortSignal.timeout(60000)
+            body: JSON.stringify({ model: modelConfig.name, input: prompt, generation_config: { thinking_level: 'minimal', max_output_tokens: 450 } }),
+            signal: AbortSignal.timeout(30000)
           });
         } catch (fetchError) {
           const timedOut = fetchError?.name === 'TimeoutError' || fetchError?.name === 'AbortError';
@@ -224,7 +224,7 @@ app.post('/api/nutri/chat', requireAuth, async (req, res) => {
           shouldFallback = true;
           break;
         }
-        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       if (successfulModel) break;
