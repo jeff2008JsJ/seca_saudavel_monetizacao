@@ -142,6 +142,9 @@ header{padding-left:max(20px,calc((100vw - 1440px)/2));padding-right:max(20px,ca
 .premium-favorites-empty{margin:12px 0 2px;padding:12px;background:white;border-radius:10px;color:#607568;font-size:13px}
 @media(max-width:650px){.premium-favorites-list{grid-template-columns:1fr}.premium-favorite-item{align-items:flex-start}}
 
+.premium-month-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px;background:#eaf6ee;border:1px solid #b9dfc5;border-radius:14px}
+.premium-month-notice strong{color:#145b3b}
+.premium-month-notice p{margin:4px 0 0;color:#426653;font-size:13px}
 .premium-upcoming{margin-top:16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
 .premium-upcoming h4{margin:0 0 10px;color:#164b35;font-size:18px}
 .premium-upcoming ul{list-style:none;padding:0;margin:0}
@@ -904,8 +907,10 @@ function getPremiumChallengeSchedule(content){
  const now=new Date();
  const period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
  if(state.premiumChallengePeriod!==period){
+  const hadPreviousPeriod=!!state.premiumChallengePeriod;
   state.premiumChallengePeriod=period;
   state.premiumChallengeDone=[];
+  if(!hadPreviousPeriod)state.premiumChallengeNoticeDismissedPeriod=period;
   save();
  }
  // Novembro/2026 permanece no terceiro desafio já exibido; depois avança a cada mês.
@@ -946,10 +951,16 @@ function renderPremiumContent(content){
  '<section class="premium-favorites-area"><div class="premium-favorites-heading"><div><h4>♥ Minhas receitas favoritas</h4><p>Suas receitas salvas ficam reunidas aqui.</p></div><span class="premium-favorite-count">'+favorites.length+' salvas</span></div>'+(favorites.length?'<div class="premium-favorites-list">'+favorites.filter(i=>recipes[i]).map(i=>'<article class="premium-favorite-item"><div><strong>'+escapeHtml(recipes[i].title)+'</strong><small>'+escapeHtml(recipes[i].category)+' • '+escapeHtml(recipes[i].time)+'</small></div><button type="button" class="secondary" onclick="document.getElementById(\'premium-recipe-'+i+'\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})">Ver receita</button></article>').join('')+'</div>':'<p class="premium-favorites-empty">Você ainda não salvou receitas. Clique em “♡ Favoritar receita” em uma receita para guardá-la aqui.</p>')+'</section>'+
  '<div class="premium-intro"><h4>🌿 Biblioteca exclusiva de receitas</h4><p>Ideias simples para variar o cardápio no dia a dia.</p></div>'+
  '<div class="premium-recipe-grid">'+recipes.map((r,i)=>'<article id="premium-recipe-'+i+'" class="premium-recipe"><span class="premium-category">'+escapeHtml(r.category)+'</span><h4>'+escapeHtml(r.title)+'</h4><p class="premium-time">⏱ '+escapeHtml(r.time)+'</p><strong>Ingredientes</strong><ul>'+r.ingredients.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><strong>Como preparar</strong><p>'+escapeHtml(r.preparation)+'</p><button type="button" class="secondary premium-favorite" onclick="togglePremiumFavorite('+i+')">'+(favorites.includes(i)?'♥ Salva nos favoritos':'♡ Favoritar receita')+'</button></article>').join('')+'</div>'+
+ (state.premiumChallengeNoticeDismissedPeriod!==state.premiumChallengePeriod?'<section class="premium-month-notice"><div><strong>🎉 Novo desafio disponível!</strong><p>O desafio deste mês já foi liberado: '+escapeHtml(challenge.title)+'. Confira as atividades e comece quando quiser.</p></div><button type="button" class="secondary" onclick="dismissPremiumChallengeNotice()">Entendi</button></section>':'')+
  '<section class="premium-challenge"><span class="premium-category">DESAFIO ATUAL • '+escapeHtml(challenge.duration)+'</span><h4>🎯 '+escapeHtml(challenge.title)+'</h4><p>'+escapeHtml(challenge.description)+'</p><div class="premium-progress"><div><strong>'+completed.length+'/'+challenge.steps.length+' dias concluídos</strong><strong>'+percent+'%</strong></div><span><i style="width:'+percent+'%"></i></span></div><ol class="premium-day-list">'+challenge.steps.map((step,i)=>'<li><label><input type="checkbox" '+(completed.includes(i)?'checked':'')+' onchange="togglePremiumChallengeDay('+i+',this.checked)"><span class="'+(completed.includes(i)?'premium-day-done':'')+'">'+escapeHtml(step)+'</span></label></li>').join('')+'</ol>'+(completed.length===challenge.steps.length&&challenge.steps.length?'<button type="button" onclick="archivePremiumChallenge()">Concluir e arquivar desafio</button>':'')+'</section>'+
  '<section class="premium-upcoming"><h4>🗓️ Próximos desafios</h4><ul>'+getUpcomingPremiumChallenges(content).map((item,index)=>'<li class="premium-upcoming-item"><div class="premium-upcoming-title"><strong>'+escapeHtml(item.challenge.title)+'</strong><span>'+escapeHtml(item.month)+'</span></div><details class="premium-preview"><summary>Ver prévia dos 7 dias</summary><p>'+escapeHtml(item.challenge.description)+'</p><ol>'+item.challenge.steps.map(step=>'<li>'+escapeHtml(step)+'</li>').join('')+'</ol></details></li>').join('')+'</ul><p>As prévias são apenas para consulta. Os dias poderão ser marcados quando o desafio entrar em vigor.</p></section>'+
  '<section class="premium-history"><div class="premium-history-heading"><h4>🏆 Histórico de desafios concluídos</h4>'+(state.premiumChallengeHistory.length?'<button type="button" class="secondary premium-history-clear" onclick="clearPremiumChallengeHistory()">Limpar histórico</button>':'')+'</div>'+(state.premiumChallengeHistory.length?'<ul>'+state.premiumChallengeHistory.slice().map((item,index)=>({item,index})).reverse().map(entry=>'<li><div class="premium-history-info"><strong>'+escapeHtml(entry.item.title)+'</strong><span>'+escapeHtml(entry.item.completedAt)+' • '+escapeHtml(entry.item.days)+' dias concluídos</span></div><button type="button" class="secondary premium-history-delete" onclick="deletePremiumChallengeHistory('+entry.index+')">Excluir</button></li>').join('')+'</ul>':'<p>Seus desafios concluídos aparecerão aqui.</p>')+'</section>'+
  '<p class="premium-note">'+escapeHtml(content.note)+'</p>';
+}
+function dismissPremiumChallengeNotice(){
+ state.premiumChallengeNoticeDismissedPeriod=state.premiumChallengePeriod||'';
+ save();
+ if(window.premiumContentData)renderPremiumContent(window.premiumContentData);
 }
 function togglePremiumFavorite(index){
  const list=state.premiumFavorites||(state.premiumFavorites=[]);
