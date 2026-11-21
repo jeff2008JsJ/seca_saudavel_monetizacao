@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Seca Saudável",
+  "short_name": "Seca Saudável",
+  "description": "Treinos, alimentação equilibrada e acompanhamento da evolução.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6faf7",
+  "theme_color": "#176443",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
