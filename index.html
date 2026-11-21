@@ -145,9 +145,15 @@ header{padding-left:max(20px,calc((100vw - 1440px)/2));padding-right:max(20px,ca
 .premium-upcoming{margin-top:16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
 .premium-upcoming h4{margin:0 0 10px;color:#164b35;font-size:18px}
 .premium-upcoming ul{list-style:none;padding:0;margin:0}
-.premium-upcoming li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid #e1eee4}
+.premium-upcoming li{display:block;padding:10px 0;border-bottom:1px solid #e1eee4}
 .premium-upcoming li:last-child{border-bottom:0}
-.premium-upcoming li span,.premium-upcoming p{font-size:13px;color:#607568}
+.premium-upcoming-title{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.premium-upcoming-title span,.premium-upcoming p{font-size:13px;color:#607568}
+.premium-preview{margin-top:7px;font-size:13px;color:#355b49}
+.premium-preview summary{cursor:pointer;font-weight:700;color:#176443}
+.premium-preview p{margin:9px 0}
+.premium-preview ol{margin:6px 0 4px;padding-left:22px}
+.premium-preview li{padding:4px 0;border:0;list-style:decimal}
 .premium-upcoming p{margin:10px 0 0}
 .premium-history{margin-top:16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
 .premium-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -941,7 +947,7 @@ function renderPremiumContent(content){
  '<div class="premium-intro"><h4>🌿 Biblioteca exclusiva de receitas</h4><p>Ideias simples para variar o cardápio no dia a dia.</p></div>'+
  '<div class="premium-recipe-grid">'+recipes.map((r,i)=>'<article id="premium-recipe-'+i+'" class="premium-recipe"><span class="premium-category">'+escapeHtml(r.category)+'</span><h4>'+escapeHtml(r.title)+'</h4><p class="premium-time">⏱ '+escapeHtml(r.time)+'</p><strong>Ingredientes</strong><ul>'+r.ingredients.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><strong>Como preparar</strong><p>'+escapeHtml(r.preparation)+'</p><button type="button" class="secondary premium-favorite" onclick="togglePremiumFavorite('+i+')">'+(favorites.includes(i)?'♥ Salva nos favoritos':'♡ Favoritar receita')+'</button></article>').join('')+'</div>'+
  '<section class="premium-challenge"><span class="premium-category">DESAFIO ATUAL • '+escapeHtml(challenge.duration)+'</span><h4>🎯 '+escapeHtml(challenge.title)+'</h4><p>'+escapeHtml(challenge.description)+'</p><div class="premium-progress"><div><strong>'+completed.length+'/'+challenge.steps.length+' dias concluídos</strong><strong>'+percent+'%</strong></div><span><i style="width:'+percent+'%"></i></span></div><ol class="premium-day-list">'+challenge.steps.map((step,i)=>'<li><label><input type="checkbox" '+(completed.includes(i)?'checked':'')+' onchange="togglePremiumChallengeDay('+i+',this.checked)"><span class="'+(completed.includes(i)?'premium-day-done':'')+'">'+escapeHtml(step)+'</span></label></li>').join('')+'</ol>'+(completed.length===challenge.steps.length&&challenge.steps.length?'<button type="button" onclick="archivePremiumChallenge()">Concluir e arquivar desafio</button>':'')+'</section>'+
- '<section class="premium-upcoming"><h4>🗓️ Próximos desafios</h4><ul>'+getUpcomingPremiumChallenges(content).map(item=>'<li><strong>'+escapeHtml(item.challenge.title)+'</strong><span>'+escapeHtml(item.month)+'</span></li>').join('')+'</ul><p>Os próximos desafios serão liberados automaticamente em cada mês.</p></section>'+
+ '<section class="premium-upcoming"><h4>🗓️ Próximos desafios</h4><ul>'+getUpcomingPremiumChallenges(content).map((item,index)=>'<li class="premium-upcoming-item"><div class="premium-upcoming-title"><strong>'+escapeHtml(item.challenge.title)+'</strong><span>'+escapeHtml(item.month)+'</span></div><details class="premium-preview"><summary>Ver prévia dos 7 dias</summary><p>'+escapeHtml(item.challenge.description)+'</p><ol>'+item.challenge.steps.map(step=>'<li>'+escapeHtml(step)+'</li>').join('')+'</ol></details></li>').join('')+'</ul><p>As prévias são apenas para consulta. Os dias poderão ser marcados quando o desafio entrar em vigor.</p></section>'+
  '<section class="premium-history"><div class="premium-history-heading"><h4>🏆 Histórico de desafios concluídos</h4>'+(state.premiumChallengeHistory.length?'<button type="button" class="secondary premium-history-clear" onclick="clearPremiumChallengeHistory()">Limpar histórico</button>':'')+'</div>'+(state.premiumChallengeHistory.length?'<ul>'+state.premiumChallengeHistory.slice().map((item,index)=>({item,index})).reverse().map(entry=>'<li><div class="premium-history-info"><strong>'+escapeHtml(entry.item.title)+'</strong><span>'+escapeHtml(entry.item.completedAt)+' • '+escapeHtml(entry.item.days)+' dias concluídos</span></div><button type="button" class="secondary premium-history-delete" onclick="deletePremiumChallengeHistory('+entry.index+')">Excluir</button></li>').join('')+'</ul>':'<p>Seus desafios concluídos aparecerão aqui.</p>')+'</section>'+
  '<p class="premium-note">'+escapeHtml(content.note)+'</p>';
 }
