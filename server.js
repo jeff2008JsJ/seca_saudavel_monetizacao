@@ -460,7 +460,7 @@ app.post('/api/gym/ai-plan', requireAuth, async (req, res) => {
       const prompt = [
         'Crie um plano geral de exercícios para um adulto, em português brasileiro. Seja conservador e seguro.',
         'Não faça diagnóstico nem prescreva reabilitação. Não recomende treinar com dor, cargas máximas, exercícios perigosos ou progressão agressiva. Priorize aquecimento, técnica, descanso e adaptação gradual. Se limitações ou condições tornarem a prescrição insegura, não gere exercícios específicos: explique que é necessária avaliação de profissional de saúde/educação física.',
-        'Retorne SOMENTE JSON válido, sem markdown, no formato: {"title":"...","schedule":["Segunda — A"],"sessions":[{"title":"Treino A","focus":"...","exercises":[{"name":"...","muscle":"...","sets":"2","reps":"8–12","rest":"60–90 segundos","notes":"..."}]}],"safety":"..."}',
+        'Retorne SOMENTE JSON válido, sem markdown, no formato: {"title":"...","schedule":["Segunda — A"],"warmup":"Aquecimento geral breve e seguro de 5 a 8 minutos, adaptável ao contexto.","sessions":[{"title":"Treino A","focus":"...","exercises":[{"name":"...","muscle":"...","sets":"2","reps":"8–12","rest":"60–90 segundos","notes":"..."}]}],"cooldown":"Orientação geral breve para desacelerar após a sessão, sem alongamentos dolorosos.","safety":"..."}',
         'Crie exatamente ' + days + ' sessões semanais. Máximo 4 exercícios por sessão. Use dias de descanso entre sessões sempre que possível.',
         'Objetivo: ' + goal, 'Nível: ' + level, 'Equipamentos: ' + equipment,
         age ? 'Idade: ' + age : '', limitations ? 'Limitações informadas pelo usuário: ' + limitations : 'Nenhuma limitação informada.',
@@ -516,6 +516,8 @@ app.post('/api/gym/ai-plan', requireAuth, async (req, res) => {
         })).filter(ex => ex.name)
       }));
       result.schedule = (Array.isArray(result.schedule) ? result.schedule : []).slice(0, days).map(x => String(x).slice(0, 60));
+      result.warmup = String(result.warmup || 'Comece com alguns minutos de atividade leve e movimentos confortáveis para preparar o corpo.').slice(0, 400);
+      result.cooldown = String(result.cooldown || 'Ao terminar, reduza o ritmo gradualmente e respeite seus limites.').slice(0, 400);
       result.safety = String(result.safety || 'Interrompa se sentir dor e procure orientação profissional quando necessário.').slice(0, 500);
       return res.json({ plan: result, premium, limit, remaining: Math.max(0, limit - Number(quota.rows[0].question_count)) });
     } catch (error) {
