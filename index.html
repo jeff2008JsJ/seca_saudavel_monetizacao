@@ -143,11 +143,14 @@ header{padding-left:max(20px,calc((100vw - 1440px)/2));padding-right:max(20px,ca
 @media(max-width:650px){.premium-favorites-list{grid-template-columns:1fr}.premium-favorite-item{align-items:flex-start}}
 
 .premium-history{margin-top:16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
+.premium-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .premium-history h4{margin:0 0 10px;color:#164b35;font-size:18px}
 .premium-history ul{list-style:none;padding:0;margin:0}
-.premium-history li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #e1eee4}
+.premium-history li{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #e1eee4}
 .premium-history li:last-child{border-bottom:0}
+.premium-history-info{display:flex;flex-direction:column;gap:4px}
 .premium-history li span,.premium-history p{font-size:13px;color:#607568}
+.premium-history-delete,.premium-history-clear{font-size:12px;padding:6px 10px}
 </style></head><body><header><div class="pill">🌱 WEB APP • VERSÃO 3.1</div><h1>Projeto Seca Saudável</h1><p>30 dias de alimentação equilibrada, movimento e autocuidado.</p><div id="userWelcome" class="user-welcome" hidden><strong id="userGreeting"></strong><span id="userPlanBadge" class="user-plan-badge"></span></div></header><main><nav class="tabs" id="tabs"><button data-tab="inicio" class="active">🏠 Início</button><button data-tab="calendario">📅 30 dias</button><button data-tab="refeicoes">🥗 Refeições</button><button data-tab="academia">🏋️ Academia</button><button data-tab="nutri">🤖 Nutri IA</button><button data-tab="postagens">📣 Postagens</button><button data-tab="compras">🛒 Compras</button><button data-tab="progresso">📈 Progresso</button><button data-tab="admin">⚙️ Conteúdo</button><button data-tab="conta">👤 Conta / Premium</button></nav><section id="inicio" class="panel active"><div class="welcome-banner" role="img" aria-label="Pessoa sorrindo em ambiente de academia, representando saúde e bem-estar"><div class="welcome-copy"><span class="welcome-kicker">🌿 SEJA BEM-VINDO(A)</span><h2>Bem-vindo ao Seca Saudável!</h2><p>Seu espaço para cuidar da saúde, conquistar seus objetivos e evoluir um dia de cada vez.</p><span class="welcome-motto">Seu próximo nível começa com um passo de cada vez. 💚</span></div></div><div class="hero"><h2>Seu mês de hábitos saudáveis 💚</h2><p>Não existe alimento milagroso nem perda localizada de gordura. O objetivo é construir uma rotina possível e sustentável.</p><div class="row"><span id="homeCount" class="stat">0/30</span><span>dias concluídos</span></div><div class="bar"><span id="bar" style="width:0%"></span></div></div><div class="grid"><div class="card"><h3>💧 Água de hoje</h3><div class="stat" id="waterCount">0 copos</div><p class="muted">Registre copos de 250 ml. A necessidade de água varia entre pessoas.</p><div class="row"><button onclick="waterChange(-1)" class="secondary">−</button><button onclick="waterChange(1)">+ Adicionar copo</button></div></div><div class="card"><h3>🚶 Movimento de hoje</h3><label class="check"><input type="checkbox" id="activity" onchange="saveActivity()"> Registrei alguma atividade física</label><p class="muted">Escolha atividades adequadas à sua condição e capacidade.</p></div><div class="card"><h3>🌿 Missão do dia</h3><h4 id="missionTitle"></h4><p id="missionText"></p><button onclick="switchTab('calendario')">Ver calendário</button></div></div></section><section id="calendario" class="panel"><div class="card"><h2>Desafio de 30 dias</h2><p class="muted">Escolha um dia para visualizar a dica e registrar sua conclusão.</p><div id="calendar" class="calendar"></div></div><div class="card"><span class="pill" id="dayTag">Dia 1</span><h2 id="dayTitle"></h2><p id="dayText"></p><p><b>Missão:</b> <span id="dayMission"></span></p><div class="row"><button onclick="completeDay()" id="completeBtn">✓ Concluir dia</button><button onclick="changeDay(-1)" class="secondary">← Anterior</button><button onclick="changeDay(1)" class="secondary">Próximo →</button></div></div></section><section id="refeicoes" class="panel"><div class="card"><h2>Cardápio ilustrativo</h2><p>Selecione uma opção de dia para variar as refeições. As porções devem ser individualizadas.</p><label for="mealSelect">Dia do cardápio</label><select id="mealSelect" onchange="renderMeals()"></select><div id="meals"></div><p class="notice">Este conteúdo é educativo, não uma dieta prescrita. Considere alergias, restrições alimentares e orientação de nutricionista.</p></div></section><section id="academia" class="panel gym-page">
  <div class="gym-hero">
   <div class="gym-hero-copy">
@@ -929,7 +932,7 @@ function renderPremiumContent(content){
  '<div class="premium-intro"><h4>🌿 Biblioteca exclusiva de receitas</h4><p>Ideias simples para variar o cardápio no dia a dia.</p></div>'+
  '<div class="premium-recipe-grid">'+recipes.map((r,i)=>'<article id="premium-recipe-'+i+'" class="premium-recipe"><span class="premium-category">'+escapeHtml(r.category)+'</span><h4>'+escapeHtml(r.title)+'</h4><p class="premium-time">⏱ '+escapeHtml(r.time)+'</p><strong>Ingredientes</strong><ul>'+r.ingredients.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><strong>Como preparar</strong><p>'+escapeHtml(r.preparation)+'</p><button type="button" class="secondary premium-favorite" onclick="togglePremiumFavorite('+i+')">'+(favorites.includes(i)?'♥ Salva nos favoritos':'♡ Favoritar receita')+'</button></article>').join('')+'</div>'+
  '<section class="premium-challenge"><span class="premium-category">DESAFIO ATUAL • '+escapeHtml(challenge.duration)+'</span><h4>🎯 '+escapeHtml(challenge.title)+'</h4><p>'+escapeHtml(challenge.description)+'</p><div class="premium-progress"><div><strong>'+completed.length+'/'+challenge.steps.length+' dias concluídos</strong><strong>'+percent+'%</strong></div><span><i style="width:'+percent+'%"></i></span></div><ol class="premium-day-list">'+challenge.steps.map((step,i)=>'<li><label><input type="checkbox" '+(completed.includes(i)?'checked':'')+' onchange="togglePremiumChallengeDay('+i+',this.checked)"><span class="'+(completed.includes(i)?'premium-day-done':'')+'">'+escapeHtml(step)+'</span></label></li>').join('')+'</ol>'+(completed.length===challenge.steps.length&&challenge.steps.length?'<button type="button" onclick="archivePremiumChallenge()">Concluir e arquivar desafio</button>':'')+'</section>'+
- '<section class="premium-history"><h4>🏆 Histórico de desafios concluídos</h4>'+(state.premiumChallengeHistory.length?'<ul>'+state.premiumChallengeHistory.slice().reverse().map(item=>'<li><strong>'+escapeHtml(item.title)+'</strong><span>'+escapeHtml(item.completedAt)+' • '+escapeHtml(item.days)+' dias concluídos</span></li>').join('')+'</ul>':'<p>Seus desafios concluídos aparecerão aqui.</p>')+'</section>'+
+ '<section class="premium-history"><div class="premium-history-heading"><h4>🏆 Histórico de desafios concluídos</h4>'+(state.premiumChallengeHistory.length?'<button type="button" class="secondary premium-history-clear" onclick="clearPremiumChallengeHistory()">Limpar histórico</button>':'')+'</div>'+(state.premiumChallengeHistory.length?'<ul>'+state.premiumChallengeHistory.slice().map((item,index)=>({item,index})).reverse().map(entry=>'<li><div class="premium-history-info"><strong>'+escapeHtml(entry.item.title)+'</strong><span>'+escapeHtml(entry.item.completedAt)+' • '+escapeHtml(entry.item.days)+' dias concluídos</span></div><button type="button" class="secondary premium-history-delete" onclick="deletePremiumChallengeHistory('+entry.index+')">Excluir</button></li>').join('')+'</ul>':'<p>Seus desafios concluídos aparecerão aqui.</p>')+'</section>'+
  '<p class="premium-note">'+escapeHtml(content.note)+'</p>';
 }
 function togglePremiumFavorite(index){
@@ -954,6 +957,23 @@ function archivePremiumChallenge(){
  state.premiumChallengeDone=[];
  save();
  renderPremiumContent(content);
+}
+function deletePremiumChallengeHistory(index){
+ const history=state.premiumChallengeHistory||[];
+ if(!Number.isInteger(index)||index<0||index>=history.length)return;
+ const item=history[index];
+ if(!confirm('Excluir o registro "'+String(item.title||'desafio')+'" do histórico? O desafio atual não será alterado.'))return;
+ state.premiumChallengeHistory=history.filter((_,i)=>i!==index);
+ save();
+ if(window.premiumContentData)renderPremiumContent(window.premiumContentData);
+}
+function clearPremiumChallengeHistory(){
+ const history=state.premiumChallengeHistory||[];
+ if(!history.length)return;
+ if(!confirm('Tem certeza de que deseja apagar todo o histórico de desafios? O desafio atual e seu progresso não serão alterados.'))return;
+ state.premiumChallengeHistory=[];
+ save();
+ if(window.premiumContentData)renderPremiumContent(window.premiumContentData);
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function startPremium(){try{const data=await apiRequest('/api/subscription/checkout',{method:'POST',body:JSON.stringify({})});window.location.href=data.checkoutUrl}catch(e){accountMessage(e.message)}}
