@@ -142,6 +142,14 @@ header{padding-left:max(20px,calc((100vw - 1440px)/2));padding-right:max(20px,ca
 .premium-favorites-empty{margin:12px 0 2px;padding:12px;background:white;border-radius:10px;color:#607568;font-size:13px}
 @media(max-width:650px){.premium-favorites-list{grid-template-columns:1fr}.premium-favorite-item{align-items:flex-start}}
 
+.premium-evolution{margin:0 0 16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
+.premium-evolution h4{margin:0 0 12px;color:#164b35;font-size:18px}
+.premium-evolution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.premium-evolution-grid div{display:flex;flex-direction:column;gap:4px;padding:12px;background:#eaf6ee;border-radius:11px}
+.premium-evolution-grid strong{font-size:23px;color:#145b3b}
+.premium-evolution-grid span,.premium-evolution p{font-size:12px;color:#607568}
+.premium-evolution p{margin:12px 0 0}
+@media(max-width:620px){.premium-evolution-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .premium-month-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px;background:#eaf6ee;border:1px solid #b9dfc5;border-radius:14px}
 .premium-month-notice strong{color:#145b3b}
 .premium-month-notice p{margin:4px 0 0;color:#426653;font-size:13px}
@@ -941,13 +949,54 @@ function getUpcomingPremiumChallenges(content){
  }).filter(item=>item.challenge);
 }
 
+function getPremiumChallengeStats(content){
+ const history=state.premiumChallengeHistory||[];
+ const current=getCurrentPremiumChallenge(content);
+ const currentDone=(state.premiumChallengeDone||[]).length;
+ const currentTotal=(current.steps||[]).length;
+ const completedDays=history.reduce((sum,item)=>sum+(Number(item.days)||0),0)+currentDone;
+ const possibleDays=history.reduce((sum,item)=>sum+(Number(item.days)||0),0)+currentTotal;
+ const periods=new Set();
+ history.forEach(item=>{
+  let period=String(item.period||'');
+  if(!/^\\d{4}-\\d{2}$/.test(period)){
+   const m=String(item.completedAt||'').match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+   if(m)period=m[3]+'-'+m[2];
+  }
+  if(/^\\d{4}-(0[1-9]|1[0-2])$/.test(period))periods.add(period);
+ });
+ const sorted=[...periods].sort();
+ let best=0,run=0,previous=null;
+ sorted.forEach(period=>{
+  const parts=period.split('-').map(Number);
+  const value=parts[0]*12+parts[1];
+  run=previous!==null&&value===previous+1?run+1:1;
+  best=Math.max(best,run);
+  previous=value;
+ });
+ const now=new Date();
+ const currentValue=now.getFullYear()*12+now.getMonth()+1;
+ const last=sorted.length?(()=>{const p=sorted[sorted.length-1].split('-').map(Number);return p[0]*12+p[1]})():null;
+ let currentStreak=0;
+ if(last!==null&&last>=currentValue-1){
+  let value=last;
+  while(periods.has(Math.floor(value/12)+'-'+String(value%12||12).padStart(2,'0'))){
+   currentStreak++;
+   value--;
+  }
+ }
+ return {completedChallenges:history.length,completedDays,completionPercent:possibleDays?Math.round(completedDays/possibleDays*100):0,activeMonths:periods.size,bestStreak:best,currentStreak};
+}
+
 function renderPremiumContent(content){
  const favorites=state.premiumFavorites||[];
  const completed=state.premiumChallengeDone||[];
  const recipes=content.recipes||[];
  const challenge=getCurrentPremiumChallenge(content);
  const percent=challenge.steps.length?Math.round(completed.length/challenge.steps.length*100):0;
+ const stats=getPremiumChallengeStats(content);
  document.getElementById('premiumContent').innerHTML=
+ '<section class="premium-evolution"><h4>📈 Minha evolução nos desafios</h4><div class="premium-evolution-grid"><div><strong>'+stats.completedChallenges+'</strong><span>Desafios concluídos</span></div><div><strong>'+stats.completedDays+'</strong><span>Dias concluídos</span></div><div><strong>'+stats.completionPercent+'%</strong><span>Conclusão geral</span></div><div><strong>'+stats.currentStreak+'</strong><span>Meses seguidos</span></div></div><p>Melhor sequência: '+stats.bestStreak+' meses • Participação em '+stats.activeMonths+' meses diferentes.</p></section>'+
  '<section class="premium-favorites-area"><div class="premium-favorites-heading"><div><h4>♥ Minhas receitas favoritas</h4><p>Suas receitas salvas ficam reunidas aqui.</p></div><span class="premium-favorite-count">'+favorites.length+' salvas</span></div>'+(favorites.length?'<div class="premium-favorites-list">'+favorites.filter(i=>recipes[i]).map(i=>'<article class="premium-favorite-item"><div><strong>'+escapeHtml(recipes[i].title)+'</strong><small>'+escapeHtml(recipes[i].category)+' • '+escapeHtml(recipes[i].time)+'</small></div><button type="button" class="secondary" onclick="document.getElementById(\'premium-recipe-'+i+'\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})">Ver receita</button></article>').join('')+'</div>':'<p class="premium-favorites-empty">Você ainda não salvou receitas. Clique em “♡ Favoritar receita” em uma receita para guardá-la aqui.</p>')+'</section>'+
  '<div class="premium-intro"><h4>🌿 Biblioteca exclusiva de receitas</h4><p>Ideias simples para variar o cardápio no dia a dia.</p></div>'+
  '<div class="premium-recipe-grid">'+recipes.map((r,i)=>'<article id="premium-recipe-'+i+'" class="premium-recipe"><span class="premium-category">'+escapeHtml(r.category)+'</span><h4>'+escapeHtml(r.title)+'</h4><p class="premium-time">⏱ '+escapeHtml(r.time)+'</p><strong>Ingredientes</strong><ul>'+r.ingredients.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><strong>Como preparar</strong><p>'+escapeHtml(r.preparation)+'</p><button type="button" class="secondary premium-favorite" onclick="togglePremiumFavorite('+i+')">'+(favorites.includes(i)?'♥ Salva nos favoritos':'♡ Favoritar receita')+'</button></article>').join('')+'</div>'+
