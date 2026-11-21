@@ -573,8 +573,22 @@ async function generateAIGymPlan(){
 function renderAIWorkoutPlan(plan,created){
  const goal=document.getElementById('gymGoal').value,level=document.getElementById('gymLevel').value,days=Number(document.getElementById('gymDays').value),equipment=document.getElementById('gymEquipment').value;
  const sessions=(plan.sessions||[]).slice(0,4).map((session,index)=>({letter:['A','B','C','D'][index],title:String(session.title||('Treino '+['A','B','C','D'][index])),focus:String(session.focus||''),items:(session.exercises||[]).slice(0,8).map(ex=>[String(ex.muscle||''),String(ex.muscle||''),String(ex.name||''),String(ex.sets||'2'),String(ex.reps||'8–12'),String(ex.rest||'60–90 s'),String(ex.notes||'')])}));
- const schedule=(plan.schedule||[]).slice(0,sessions.length);
- const weekdayMap=days===2?{1:'A',4:'B'}:days===3?{1:'A',3:'B',5:'C'}:{1:'A',2:'B',4:'C',5:'D'};
+ const schedule=(plan.schedule||[]).slice(0,7);
+ const weekdayMap={};
+ const weekDays=[['domingo',0],['segunda',1],['terca',2],['quarta',3],['quinta',4],['sexta',5],['sabado',6]];
+ let nextSession=0;
+ schedule.forEach(entry=>{
+  const normalized=String(entry||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR');
+  if(normalized.includes('descanso'))return;
+  const day=weekDays.find(([name])=>normalized.includes(name));
+  if(!day)return;
+  const letterMatch=normalized.match(/(?:treino\\s*)?([abcd])\\b/);
+  const letter=letterMatch?letterMatch[1].toUpperCase():sessions[nextSession]?.letter;
+  if(letter&&sessions.some(session=>session.letter===letter)){weekdayMap[day[1]]=letter;nextSession++}
+ });
+ if(!Object.keys(weekdayMap).length){
+  Object.assign(weekdayMap,days===2?{1:'A',4:'B'}:days===3?{1:'A',3:'B',5:'C'}:{1:'A',2:'B',4:'C',5:'D'});
+ }
  generatedRoutine={goal,level,days,equipment,sessions,schedule,weekdayMap,aiPlan:plan,createdAt:new Date().toISOString()};
  document.getElementById('customWorkout').textContent='Treino personalizado criado pela IA. '+String(plan.safety||'Revise os exercícios antes de começar.')+' Confira se os movimentos são adequados e interrompa se sentir dor.';
  document.getElementById('routineSchedule').innerHTML=schedule.map(x=>'<span>'+escapeHtml(String(x))+'</span>').join('');
