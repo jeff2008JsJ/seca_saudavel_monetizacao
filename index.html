@@ -142,6 +142,13 @@ header{padding-left:max(20px,calc((100vw - 1440px)/2));padding-right:max(20px,ca
 .premium-favorites-empty{margin:12px 0 2px;padding:12px;background:white;border-radius:10px;color:#607568;font-size:13px}
 @media(max-width:650px){.premium-favorites-list{grid-template-columns:1fr}.premium-favorite-item{align-items:flex-start}}
 
+.premium-upcoming{margin-top:16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
+.premium-upcoming h4{margin:0 0 10px;color:#164b35;font-size:18px}
+.premium-upcoming ul{list-style:none;padding:0;margin:0}
+.premium-upcoming li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid #e1eee4}
+.premium-upcoming li:last-child{border-bottom:0}
+.premium-upcoming li span,.premium-upcoming p{font-size:13px;color:#607568}
+.premium-upcoming p{margin:10px 0 0}
 .premium-history{margin-top:16px;padding:16px;background:#f7fbf7;border:1px solid #d5eadb;border-radius:15px}
 .premium-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .premium-history h4{margin:0 0 10px;color:#164b35;font-size:18px}
@@ -885,40 +892,42 @@ async function accountLogout(){try{await apiRequest('/api/auth/logout',{method:'
 async function refreshAccount(){try{const data=await apiRequest('/api/me');const status=document.getElementById('accountStatus');const premium=document.getElementById('premiumArea');const btn=document.getElementById('premiumButton');const welcome=document.getElementById('userWelcome');const greeting=document.getElementById('userGreeting');const planBadge=document.getElementById('userPlanBadge');if(!data.user){welcome.hidden=true;gymSyncReady=false;appStateSyncReady=false;currentGymEmail='';currentUserId=null;KEY='seca_saudavel_v3_guest';state=emptyAppState();localStorage.setItem(KEY,JSON.stringify(state));renderCalendar();renderShopping();renderProgress();status.textContent='Você está no plano gratuito. Entre ou crie uma conta para assinar.';premium.hidden=true;btn.disabled=true;btn.textContent='Entre ou cadastre-se para assinar';loadGymData();return}currentGymEmail=data.user.email||'';currentUserId=data.user.id;KEY='seca_saudavel_v3_user_'+String(currentUserId);try{state=normalizeAppState(JSON.parse(localStorage.getItem(KEY))||emptyAppState())}catch(_){state=emptyAppState()}renderCalendar();renderShopping();renderProgress();await syncGymDataWithServer();await syncAppStateWithServer();const firstName=String(data.user.name||'').trim().split(/\s+/)[0]||'bem-vindo(a)';const hour=new Date().getHours();const period=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';greeting.textContent=period+', '+firstName+'!';planBadge.textContent=data.premium?'PREMIUM ATIVO':'PLANO GRATUITO';welcome.hidden=false;status.textContent='Conectado como '+data.user.email+' • Plano: '+(data.premium?'Premium ativo':'Gratuito');loadGymData();btn.disabled=data.premium;if(data.premium){btn.textContent='Assinatura Premium ativa';premium.hidden=false;try{const content=await apiRequest('/api/premium/content');window.premiumContentData=content;renderPremiumContent(content);}catch(e){document.getElementById('premiumContent').textContent=e.message}}else{btn.disabled=false;btn.textContent='Assinar Premium — R$ 19,90/mês';premium.hidden=true}}catch(e){document.getElementById('accountStatus').textContent='Não foi possível consultar sua conta. O servidor está iniciado?';}}
 
 
-function getCurrentPremiumChallenge(content){
- const fallback={
-  title:'Desafio do prato colorido',
-  duration:'7 dias',
-  description:'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
-  steps:[
-   'Dia 1: escolha uma fruta para incluir no dia.',
-   'Dia 2: acrescente um vegetal de outra cor.',
-   'Dia 3: experimente uma preparação diferente.',
-   'Dia 4: monte uma lista curta de alimentos coloridos.',
-   'Dia 5: prepare uma refeição simples em casa.',
-   'Dia 6: varie uma fruta ou legume que costuma consumir.',
-   'Dia 7: observe quais combinações gostou e gostaria de repetir.'
-  ]
- };
+function getPremiumChallengeSchedule(content){
  const challenges=content&&content.monthlyChallenges;
- if(Array.isArray(challenges)&&challenges.length){
-  const now=new Date();
-  const period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  if(state.premiumChallengePeriod!==period){
-   state.premiumChallengePeriod=period;
-   state.premiumChallengeDone=[];
-   save();
-  }
-  // Novembro/2026 permanece no terceiro desafio já exibido; depois avança a cada mês.
-  const anchorYear=2026,anchorMonth=10,anchorIndex=2;
-  const monthNumber=now.getFullYear()*12+now.getMonth();
-  const anchorNumber=anchorYear*12+anchorMonth;
-  const index=((anchorIndex+(monthNumber-anchorNumber))%challenges.length+challenges.length)%challenges.length;
-  const selected=challenges[index];
+ if(!Array.isArray(challenges)||!challenges.length)return null;
+ const now=new Date();
+ const period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+ if(state.premiumChallengePeriod!==period){
+  state.premiumChallengePeriod=period;
+  state.premiumChallengeDone=[];
+  save();
+ }
+ // Novembro/2026 permanece no terceiro desafio já exibido; depois avança a cada mês.
+ const anchorYear=2026,anchorMonth=10,anchorIndex=2;
+ const monthNumber=now.getFullYear()*12+now.getMonth();
+ const anchorNumber=anchorYear*12+anchorMonth;
+ const index=((anchorIndex+(monthNumber-anchorNumber))%challenges.length+challenges.length)%challenges.length;
+ return {challenges,index,period};
+}
+function getCurrentPremiumChallenge(content){
+ const schedule=getPremiumChallengeSchedule(content);
+ if(schedule){
+  const selected=schedule.challenges[schedule.index];
   if(selected&&Array.isArray(selected.steps))return selected;
  }
  const legacy=content&&content.monthlyChallenge;
- return legacy&&Array.isArray(legacy.steps)?legacy:fallback;
+ if(legacy&&Array.isArray(legacy.steps))return legacy;
+ return {title:'Desafio do prato colorido',duration:'7 dias',description:'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições.',steps:['Dia 1: escolha uma fruta para incluir no dia.','Dia 2: acrescente um vegetal de outra cor.','Dia 3: experimente uma preparação diferente.','Dia 4: monte uma lista curta de alimentos coloridos.','Dia 5: prepare uma refeição simples em casa.','Dia 6: varie uma fruta ou legume que costuma consumir.','Dia 7: observe quais combinações gostou e gostaria de repetir.']};
+}
+function getUpcomingPremiumChallenges(content){
+ const schedule=getPremiumChallengeSchedule(content);
+ if(!schedule)return [];
+ const labels=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+ return [1,2,3].map(offset=>{
+  const monthDate=new Date(new Date().getFullYear(),new Date().getMonth()+offset,1);
+  const index=(schedule.index+offset)%schedule.challenges.length;
+  return {challenge:schedule.challenges[index],month:labels[monthDate.getMonth()]+' de '+monthDate.getFullYear()};
+ }).filter(item=>item.challenge);
 }
 
 function renderPremiumContent(content){
@@ -932,6 +941,7 @@ function renderPremiumContent(content){
  '<div class="premium-intro"><h4>🌿 Biblioteca exclusiva de receitas</h4><p>Ideias simples para variar o cardápio no dia a dia.</p></div>'+
  '<div class="premium-recipe-grid">'+recipes.map((r,i)=>'<article id="premium-recipe-'+i+'" class="premium-recipe"><span class="premium-category">'+escapeHtml(r.category)+'</span><h4>'+escapeHtml(r.title)+'</h4><p class="premium-time">⏱ '+escapeHtml(r.time)+'</p><strong>Ingredientes</strong><ul>'+r.ingredients.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><strong>Como preparar</strong><p>'+escapeHtml(r.preparation)+'</p><button type="button" class="secondary premium-favorite" onclick="togglePremiumFavorite('+i+')">'+(favorites.includes(i)?'♥ Salva nos favoritos':'♡ Favoritar receita')+'</button></article>').join('')+'</div>'+
  '<section class="premium-challenge"><span class="premium-category">DESAFIO ATUAL • '+escapeHtml(challenge.duration)+'</span><h4>🎯 '+escapeHtml(challenge.title)+'</h4><p>'+escapeHtml(challenge.description)+'</p><div class="premium-progress"><div><strong>'+completed.length+'/'+challenge.steps.length+' dias concluídos</strong><strong>'+percent+'%</strong></div><span><i style="width:'+percent+'%"></i></span></div><ol class="premium-day-list">'+challenge.steps.map((step,i)=>'<li><label><input type="checkbox" '+(completed.includes(i)?'checked':'')+' onchange="togglePremiumChallengeDay('+i+',this.checked)"><span class="'+(completed.includes(i)?'premium-day-done':'')+'">'+escapeHtml(step)+'</span></label></li>').join('')+'</ol>'+(completed.length===challenge.steps.length&&challenge.steps.length?'<button type="button" onclick="archivePremiumChallenge()">Concluir e arquivar desafio</button>':'')+'</section>'+
+ '<section class="premium-upcoming"><h4>🗓️ Próximos desafios</h4><ul>'+getUpcomingPremiumChallenges(content).map(item=>'<li><strong>'+escapeHtml(item.challenge.title)+'</strong><span>'+escapeHtml(item.month)+'</span></li>').join('')+'</ul><p>Os próximos desafios serão liberados automaticamente em cada mês.</p></section>'+
  '<section class="premium-history"><div class="premium-history-heading"><h4>🏆 Histórico de desafios concluídos</h4>'+(state.premiumChallengeHistory.length?'<button type="button" class="secondary premium-history-clear" onclick="clearPremiumChallengeHistory()">Limpar histórico</button>':'')+'</div>'+(state.premiumChallengeHistory.length?'<ul>'+state.premiumChallengeHistory.slice().map((item,index)=>({item,index})).reverse().map(entry=>'<li><div class="premium-history-info"><strong>'+escapeHtml(entry.item.title)+'</strong><span>'+escapeHtml(entry.item.completedAt)+' • '+escapeHtml(entry.item.days)+' dias concluídos</span></div><button type="button" class="secondary premium-history-delete" onclick="deletePremiumChallengeHistory('+entry.index+')">Excluir</button></li>').join('')+'</ul>':'<p>Seus desafios concluídos aparecerão aqui.</p>')+'</section>'+
  '<p class="premium-note">'+escapeHtml(content.note)+'</p>';
 }
@@ -953,7 +963,12 @@ function archivePremiumChallenge(){
  const challenge=content&&getCurrentPremiumChallenge(content);
  if(!challenge||!challenge.steps||state.premiumChallengeDone.length!==challenge.steps.length)return;
  const history=state.premiumChallengeHistory||(state.premiumChallengeHistory=[]);
- history.push({title:challenge.title,completedAt:new Date().toLocaleDateString('pt-BR'),period:state.premiumChallengePeriod||'',days:state.premiumChallengeDone.length});
+ const period=state.premiumChallengePeriod||'';
+ if(history.some(item=>item.title===challenge.title&&item.period===period)){
+  alert('Este desafio já foi arquivado neste mês.');
+  return;
+ }
+ history.push({title:challenge.title,completedAt:new Date().toLocaleDateString('pt-BR'),period,days:state.premiumChallengeDone.length});
  state.premiumChallengeDone=[];
  save();
  renderPremiumContent(content);
