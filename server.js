@@ -2,7 +2,9 @@ require('dotenv').config();
 
 const express = require('express');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+const PgSession = require('connect-pg-simple')(session);
+const helmet = require('helmet');
+const premiumContent = require('./premium-content');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -10,8 +12,6 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/hero-boas-vindas-github.jpg', (_req, res) => res.sendFile(path.join(__dirname, 'hero-boas-vindas-github.jpg')));
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL não está configurada no arquivo .env.');
@@ -79,12 +79,65 @@ async function enviarEmailRecuperacao({ to, subject, text, html }) {
 }
 
 app.set('trust proxy', 1);
+
+if (isProd && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
+  throw new Error('Defina SESSION_SECRET (mínimo de 32 caracteres) no ambiente de produção.');
+}
+
+// Cabeçalhos de segurança (CSP, anti-clickjacking, HSTS em produção etc.).
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://wger.de'],
+      frameSrc: ['https://www.youtube-nocookie.com', 'https://www.youtube.com'],
+      fontSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      ...(isProd ? { upgradeInsecureRequests: [] } : {})
+    }
+  },
+  hsts: isProd ? { maxAge: 180 * 24 * 60 * 60 } : false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
+// Página principal: o BASE_URL é inserido nas meta tags de compartilhamento.
+const fs = require('fs');
+const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('%BASE_URL%', BASE_URL);
+app.get('/', (_req, res) => res.type('html').send(indexHtml));
+
+// Somente a pasta public/ é servida como arquivos estáticos (nunca a raiz do projeto).
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: isProd ? '1d' : 0, extensions: ['html'] }));
 app.use(express.json({ limit: '1mb' }));
 
-// Mantemos as sessões no SQLite por enquanto. A migração do banco de sessões
-// é separada e não é necessária para migrar usuários/assinaturas/Academia.
+// Proteção CSRF: toda requisição que altera dados precisa vir do próprio site
+// (cabeçalho Origin/Referer) e em JSON. O webhook do Mercado Pago tem assinatura própria.
+const allowedOrigins = new Set([new URL(BASE_URL).origin]);
+app.use('/api', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path.startsWith('/webhooks/')) return next();
+  let origin = req.get('origin');
+  if (!origin && req.get('referer')) {
+    try { origin = new URL(req.get('referer')).origin; } catch (_) { origin = ''; }
+  }
+  const sameHost = origin && origin === `${req.protocol}://${req.get('host')}`;
+  if (!origin || !(allowedOrigins.has(origin) || sameHost) || !req.is('application/json')) {
+    return res.status(403).json({ error: 'Requisição bloqueada por segurança. Recarregue a página e tente novamente.' });
+  }
+  return next();
+});
+
+// Sessões ficam no PostgreSQL (tabela public.user_sessions), então ninguém é
+// deslogado quando o servidor reinicia ou é publicado de novo.
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: __dirname }),
+  store: new PgSession({ pool, tableName: 'user_sessions', createTableIfMissing: true, pruneSessionInterval: 60 * 60 }),
+  name: 'seca.sid',
   secret: process.env.SESSION_SECRET || 'DEV_ONLY_CHANGE_THIS_SECRET',
   resave: false,
   saveUninitialized: false,
@@ -124,147 +177,14 @@ async function activeSub(userId) {
   return result.rows[0] || null;
 }
 
-const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
-const NUTRI_FREE_LIMIT = 5;
-const NUTRI_PREMIUM_LIMIT = 30;
-const NUTRI_MODEL = 'gemini-3.8-flash';
-
-async function obterLimiteNutri(userId) {
-  const premium = !!(await activeSub(userId));
-  return { premium, limit: premium ? NUTRI_PREMIUM_LIMIT : NUTRI_FREE_LIMIT };
-}
-
-app.get('/api/nutri/status', requireAuth, async (req, res) => {
-  try {
-    const { premium, limit } = await obterLimiteNutri(req.session.userId);
-    const usage = await pool.query(`SELECT question_count FROM public.nutri_ai_usage WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`, [req.session.userId]);
-    const used = Number(usage.rows[0]?.question_count || 0);
-    return res.json({ premium, used, limit, remaining: Math.max(0, limit - used) });
-  } catch (error) {
-    console.error('Erro ao consultar limite da Nutri IA:', error);
-    return res.status(500).json({ error: 'Não foi possível consultar o limite da Nutri IA.' });
-  }
-});
-
-app.post('/api/nutri/chat', requireAuth, async (req, res) => {
-  if (!GEMINI_API_KEY) return res.status(503).json({ error: 'A inteligência artificial ainda não está configurada no servidor.' });
-  const question = String(req.body?.message || '').trim().slice(0, 1200);
-  if (question.length < 2) return res.status(400).json({ error: 'Digite uma pergunta para a Nutri IA.' });
-  const history = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
-  const safeHistory = history.map(item => ({ role: item?.role === 'assistant' ? 'Nutri IA' : 'Usuário', text: String(item?.content || '').trim().slice(0, 1200) })).filter(item => item.text);
-  let quotaCounted = false;
-  let quotaCount = 0;
-  try {
-    const { premium, limit } = await obterLimiteNutri(req.session.userId);
-    const quota = await pool.query(
-      `INSERT INTO public.nutri_ai_usage (user_id, usage_date, question_count) VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET question_count = public.nutri_ai_usage.question_count + 1 WHERE public.nutri_ai_usage.question_count < $2 RETURNING question_count`,
-      [req.session.userId, limit]
-    );
-    if (!quota.rows[0]) return res.status(429).json({ error: premium ? 'Você atingiu as 30 perguntas de hoje. Seu limite será renovado amanhã.' : 'Você atingiu as 5 perguntas gratuitas de hoje. O limite será renovado amanhã.', used: limit, limit, remaining: 0, premium });
-    quotaCounted = true;
-    quotaCount = Number(quota.rows[0].question_count);
-    const historyText = safeHistory.map(item => item.role + ': ' + item.text).join(' | ');
-    const prompt = [
-      'Você é a Nutri IA, assistente educativa do Projeto Seca Saudável. Responda sempre em português brasileiro, com linguagem acolhedora, simples, objetiva e sem julgamentos.',
-      'Ajude com informações gerais sobre alimentação equilibrada, hábitos saudáveis, hidratação e atividade física segura.',
-      'Não diagnostique doenças, não prescreva dietas clínicas, medicamentos, suplementos ou metas agressivas de perda de peso. Não substitua médico, nutricionista ou educador físico.',
-      'Quando houver gravidez, doença, transtorno alimentar, uso de medicamentos ou sintomas preocupantes, oriente procurar um profissional de saúde. Em emergência, oriente procurar atendimento imediato.',
-      'Não prometa emagrecimento rápido nem recomende jejum extremo, restrição severa ou práticas perigosas. Se não souber, diga claramente.',
-      historyText ? 'Contexto recente: ' + historyText : '',
-      'Pergunta atual do usuário: ' + question
-    ].filter(Boolean).join('\n\n');
-    let response;
-    let data = {};
-    const modelsToTry = [
-      { name: 'gemini-3.5-flash-lite', attempts: 1 },
-      { name: NUTRI_MODEL, attempts: 1 }
-    ];
-    let successfulModel = null;
-    let lastProviderStatus = null;
-
-    for (const modelConfig of modelsToTry) {
-      let shouldFallback = false;
-      for (let attempt = 1; attempt <= modelConfig.attempts; attempt++) {
-        try {
-          response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-            method: 'POST',
-            headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-            body: JSON.stringify({ model: modelConfig.name, input: prompt, generation_config: { thinking_level: 'minimal', max_output_tokens: 450 } }),
-            signal: AbortSignal.timeout(30000)
-          });
-        } catch (fetchError) {
-          const timedOut = fetchError?.name === 'TimeoutError' || fetchError?.name === 'AbortError';
-          console.error('Falha de comunicação com Gemini:', modelConfig.name, fetchError?.name || 'Erro', fetchError?.message || '', 'Tentativa:', attempt, '/', modelConfig.attempts);
-          if (!timedOut || attempt === modelConfig.attempts) {
-            shouldFallback = true;
-            lastProviderStatus = timedOut ? 'timeout' : 'network';
-            break;
-          }
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          continue;
-        }
-
-        data = await response.json().catch(() => ({}));
-        if (response.ok) {
-          successfulModel = modelConfig.name;
-          break;
-        }
-
-        lastProviderStatus = response.status;
-        const retryable = response.status === 429 || response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504;
-        console.error('Gemini API respondeu com erro HTTP:', response.status, JSON.stringify(data?.error || data).slice(0, 1500), 'Modelo:', modelConfig.name, 'Tentativa:', attempt, '/', modelConfig.attempts);
-
-        if (!retryable) {
-          const apiError = new Error(response.status === 401 || response.status === 403
-            ? 'A configuração de acesso à Nutri IA precisa ser verificada.'
-            : 'A Nutri IA não conseguiu processar sua pergunta agora.');
-          apiError.status = response.status;
-          throw apiError;
-        }
-        if (attempt === modelConfig.attempts) {
-          shouldFallback = true;
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-
-      if (successfulModel) break;
-      if (shouldFallback && modelConfig.name !== modelsToTry[modelsToTry.length - 1].name) {
-        console.warn('Acionando modelo alternativo da Nutri IA após falha no modelo principal:', modelConfig.name);
-        continue;
-      }
-    }
-
-    if (!successfulModel) {
-      const message = lastProviderStatus === 'timeout'
-        ? 'A Nutri IA está demorando para responder. Tente novamente em alguns minutos.'
-        : lastProviderStatus === 'network'
-          ? 'Não foi possível conectar à Nutri IA. Tente novamente em instantes.'
-          : 'A Nutri IA está temporariamente indisponível. Tente novamente em alguns minutos.';
-      throw new Error(message);
-    }
-    console.info('Nutri IA respondeu usando o modelo:', successfulModel);
-    const answer = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\n')).trim();
-    if (!answer) throw new Error('A IA retornou uma resposta vazia. Tente novamente.');
-    const used = quotaCount;
-    return res.json({ answer, used, limit, remaining: Math.max(0, limit - used), premium });
-  } catch (error) {
-    if (quotaCounted) {
-      try {
-        await pool.query(`UPDATE public.nutri_ai_usage SET question_count = GREATEST(question_count - 1, 0) WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`, [req.session.userId]);
-      } catch (refundError) {
-        console.error('Não foi possível devolver a pergunta da Nutri IA:', refundError.message);
-      }
-    }
-    console.error('Erro na Nutri IA:', error.message);
-    return res.status(502).json({ error: error.message || 'Não foi possível consultar a Nutri IA.' });
-  }
-});
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   const name = String(req.body.name || '').trim().slice(0, 80);
   const email = String(req.body.email || '').trim().toLowerCase().slice(0, 190);
   const password = String(req.body.password || '');
 
+  if (req.body.acceptTerms !== true) {
+    return res.status(400).json({ error: 'Para criar a conta, aceite os Termos de uso e a Política de privacidade.' });
+  }
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10) {
     return res.status(400).json({ error: 'Informe nome, e-mail válido e senha com pelo menos 10 caracteres.' });
   }
@@ -272,12 +192,13 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 12);
     const result = await pool.query(
-      `INSERT INTO public.users (name, email, password_hash)
-       VALUES ($1, $2, $3)
+      `INSERT INTO public.users (name, email, password_hash, terms_accepted_at)
+       VALUES ($1, $2, $3, NOW())
        RETURNING id, name, email`,
       [name, email, hash]
     );
     const user = { ...result.rows[0], id: Number(result.rows[0].id) };
+    await new Promise((resolve, reject) => req.session.regenerate(err => (err ? reject(err) : resolve())));
     req.session.userId = Number(user.id);
     return res.json({ user, premium: false });
   } catch (error) {
@@ -436,98 +357,7 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
-});
-
-app.post('/api/gym/ai-plan', requireAuth, async (req, res) => {
-  if (!GEMINI_API_KEY) return res.status(503).json({ error: 'A IA ainda não está configurada no servidor.' });
-  const goal = String(req.body?.goal || 'condicionamento').slice(0, 40);
-  const level = String(req.body?.level || 'iniciante').slice(0, 30);
-  const days = Math.max(2, Math.min(4, Number(req.body?.days) || 3));
-  const equipment = String(req.body?.equipment || 'academia').slice(0, 30);
-  const age = Number(req.body?.age);
-  const limitations = String(req.body?.limitations || '').trim().slice(0, 500);
-  if (age && (age < 18 || age > 100)) return res.status(400).json({ error: 'Informe uma idade válida entre 18 e 100 anos.' });
-  try {
-    const { premium, limit } = await obterLimiteNutri(req.session.userId);
-    const quota = await pool.query(
-      `INSERT INTO public.nutri_ai_usage (user_id, usage_date, question_count) VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET question_count = public.nutri_ai_usage.question_count + 1 WHERE public.nutri_ai_usage.question_count < $2 RETURNING question_count`,
-      [req.session.userId, limit]
-    );
-    if (!quota.rows[0]) return res.status(429).json({ error: premium ? 'Você atingiu as 30 utilizações de IA de hoje.' : 'Você atingiu as 5 utilizações gratuitas de IA de hoje.' });
-    let counted = true;
-    try {
-      const prompt = [
-        'Crie um plano geral de exercícios para um adulto, em português brasileiro. Seja conservador e seguro.',
-        'Não faça diagnóstico nem prescreva reabilitação. Não recomende treinar com dor, cargas máximas, exercícios perigosos ou progressão agressiva. Priorize aquecimento, técnica, descanso e adaptação gradual. Se limitações ou condições tornarem a prescrição insegura, não gere exercícios específicos: explique que é necessária avaliação de profissional de saúde/educação física.',
-        'Retorne SOMENTE JSON válido, sem markdown, no formato: {"title":"...","schedule":["Segunda — A"],"warmup":"Aquecimento geral breve e seguro de 5 a 8 minutos, adaptável ao contexto.","sessions":[{"title":"Treino A","focus":"...","exercises":[{"name":"...","muscle":"...","sets":"2","reps":"8–12","rest":"60–90 segundos","notes":"..."}]}],"cooldown":"Orientação geral breve para desacelerar após a sessão, sem alongamentos dolorosos.","safety":"..."}',
-        'Crie exatamente ' + days + ' sessões semanais. Máximo 4 exercícios por sessão. Use dias de descanso entre sessões sempre que possível.',
-        'Objetivo: ' + goal, 'Nível: ' + level, 'Equipamentos: ' + equipment,
-        age ? 'Idade: ' + age : '', limitations ? 'Limitações informadas pelo usuário: ' + limitations : 'Nenhuma limitação informada.',
-        'Não invente dados pessoais. Se faltar informação, mantenha o plano básico e seguro.'
-      ].filter(Boolean).join('\n');
-      let result = null, lastError = null;
-      const workoutModels = [
-        { name: 'gemini-3.5-flash-lite', thinking: 'minimal' },
-        { name: NUTRI_MODEL, thinking: 'low' }
-      ];
-      for (const modelConfig of workoutModels) {
-        const model = modelConfig.name;
-        try {
-          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-            method: 'POST',
-            headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json', 'Api-Revision': '2026-05-20' },
-            body: JSON.stringify({
-              model,
-              input: prompt + '\\n\\nIMPORTANTE: produza JSON completo e válido, sem texto antes ou depois. Use no máximo 4 exercícios por sessão e frases curtas para evitar truncamento.',
-              generation_config: { thinking_level: modelConfig.thinking, max_output_tokens: 2400 }
-            }),
-            signal: AbortSignal.timeout(60000)
-          });
-          const data = await response.json().catch(() => ({}));
-          if (response.ok) {
-            const raw = String(data.output_text || (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []).filter(part => part.type === 'text').map(part => part.text || '').join('\\n')).trim();
-            const cleaned = raw.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '');
-            try {
-              result = JSON.parse(cleaned);
-            } catch (parseError) {
-              lastError = parseError;
-              console.error('A resposta do modelo não veio como JSON completo:', model, parseError.message, 'Caracteres recebidos:', cleaned.length);
-              continue;
-            }
-            break;
-          }
-          lastError = new Error('Gemini HTTP ' + response.status);
-          console.error('Erro ao gerar treino com Gemini:', response.status, JSON.stringify(data?.error || data).slice(0, 1000), model);
-          if (![429, 500, 502, 503, 504].includes(response.status)) break;
-        } catch (error) {
-          lastError = error;
-          console.error('Falha no modelo de treino:', model, error.message);
-        }
-      }
-      if (!result || !Array.isArray(result.sessions) || result.sessions.length !== days) throw lastError || new Error('A IA não retornou um plano válido.');
-      result.sessions = result.sessions.slice(0, days).map(session => ({
-        title: String(session.title || 'Treino').slice(0, 100),
-        focus: String(session.focus || '').slice(0, 180),
-        exercises: (Array.isArray(session.exercises) ? session.exercises : []).slice(0, 4).map(ex => ({
-          name: String(ex.name || '').slice(0, 100), muscle: String(ex.muscle || '').slice(0, 60),
-          sets: String(ex.sets || '2').slice(0, 20), reps: String(ex.reps || '8–12').slice(0, 30),
-          rest: String(ex.rest || '60–90 s').slice(0, 40), notes: String(ex.notes || '').slice(0, 180)
-        })).filter(ex => ex.name)
-      }));
-      result.schedule = (Array.isArray(result.schedule) ? result.schedule : []).slice(0, days).map(x => String(x).slice(0, 60));
-      result.warmup = String(result.warmup || 'Comece com alguns minutos de atividade leve e movimentos confortáveis para preparar o corpo.').slice(0, 400);
-      result.cooldown = String(result.cooldown || 'Ao terminar, reduza o ritmo gradualmente e respeite seus limites.').slice(0, 400);
-      result.safety = String(result.safety || 'Interrompa se sentir dor e procure orientação profissional quando necessário.').slice(0, 500);
-      return res.json({ plan: result, premium, limit, remaining: Math.max(0, limit - Number(quota.rows[0].question_count)) });
-    } catch (error) {
-      if (counted) await pool.query(`UPDATE public.nutri_ai_usage SET question_count = GREATEST(question_count - 1, 0) WHERE user_id = $1 AND usage_date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`, [req.session.userId]).catch(refundError => console.error('Falha ao devolver utilização de IA:', refundError.message));
-      throw error;
-    }
-  } catch (error) {
-    console.error('Erro ao montar treino com IA:', error.message);
-    return res.status(502).json({ error: 'Não foi possível montar o treino agora. Tente novamente em instantes.' });
-  }
+  req.session.destroy(() => res.clearCookie('seca.sid').json({ ok: true }));
 });
 
 app.get('/api/gym/data', requireAuth, async (req, res) => {
@@ -745,121 +575,46 @@ app.get('/api/premium/content', requireAuth, async (req, res) => {
     if (!(await activeSub(req.session.userId))) {
       return res.status(403).json({ error: 'Conteúdo exclusivo para assinantes Premium.' });
     }
-    return res.json({
-      plan: 'Projeto Seca Saudável Premium',
-      price: 'R$ 19,90/mês',
-      benefits: [
-        'Biblioteca premium de receitas e materiais',
-        'Novos desafios mensais',
-        'Materiais extras para organização alimentar'
-      ],
-      monthlyChallenge: {
-        title: 'Desafio do prato colorido',
-        duration: '7 dias',
-        description: 'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
-        steps: [
-          'Dia 1: escolha uma fruta para incluir no dia.',
-          'Dia 2: acrescente um vegetal de outra cor.',
-          'Dia 3: experimente uma preparação diferente.',
-          'Dia 4: monte uma lista curta de alimentos coloridos.',
-          'Dia 5: prepare uma refeição simples em casa.',
-          'Dia 6: varie uma fruta ou legume que costuma consumir.',
-          'Dia 7: observe quais combinações gostou e gostaria de repetir.'
-        ]
-      },
-      monthlyChallenges: [
-        {
-          title: 'Desafio do prato colorido',
-          duration: '7 dias',
-          description: 'Durante uma semana, experimente incluir vegetais ou frutas de cores variadas nas refeições, respeitando suas preferências e disponibilidade.',
-          steps: [
-            'Dia 1: escolha uma fruta para incluir no dia.',
-            'Dia 2: acrescente um vegetal de outra cor.',
-            'Dia 3: experimente uma preparação diferente.',
-            'Dia 4: monte uma lista curta de alimentos coloridos.',
-            'Dia 5: prepare uma refeição simples em casa.',
-            'Dia 6: varie uma fruta ou legume que costuma consumir.',
-            'Dia 7: observe quais combinações gostou e gostaria de repetir.'
-          ]
-        },
-        {
-          title: 'Desafio da hidratação consciente',
-          duration: '7 dias',
-          description: 'Observe sua rotina de hidratação e crie lembretes simples para beber água ao longo do dia, respeitando suas necessidades individuais.',
-          steps: [
-            'Dia 1: observe em quais momentos costuma beber água.',
-            'Dia 2: deixe uma garrafa ou copo de água em local visível.',
-            'Dia 3: associe um copo de água a uma pausa da rotina.',
-            'Dia 4: leve água quando sair de casa.',
-            'Dia 5: faça uma pausa para beber água durante o trabalho ou estudo.',
-            'Dia 6: perceba quais lembretes funcionam melhor para você.',
-            'Dia 7: escolha um hábito simples de hidratação para manter.'
-          ]
-        },
-        {
-          title: 'Desafio do planejamento alimentar',
-          duration: '7 dias',
-          description: 'Organize pequenas escolhas para facilitar as refeições da semana, sem regras rígidas ou cobranças.',
-          steps: [
-            'Dia 1: anote algumas refeições de que você gosta.',
-            'Dia 2: confira os alimentos que já tem em casa.',
-            'Dia 3: monte uma lista simples de compras.',
-            'Dia 4: escolha uma preparação prática para adiantar.',
-            'Dia 5: organize opções simples para os próximos dias.',
-            'Dia 6: experimente uma combinação diferente com o que tem disponível.',
-            'Dia 7: revise o que facilitou sua rotina e planeje a próxima semana.'
-          ]
-        },
-        {
-          title: 'Desafio dos hábitos equilibrados',
-          duration: '7 dias',
-          description: 'Experimente pequenas atitudes de bem-estar que possam caber na sua rotina, sem buscar perfeição.',
-          steps: [
-            'Dia 1: reserve alguns minutos para uma refeição sem distrações.',
-            'Dia 2: inclua uma pausa de descanso na rotina.',
-            'Dia 3: escolha uma atividade leve de que goste.',
-            'Dia 4: tente manter um horário regular para dormir.',
-            'Dia 5: faça uma refeição com atenção aos sinais de fome e saciedade.',
-            'Dia 6: reconheça uma escolha positiva que fez por você.',
-            'Dia 7: escolha um hábito possível para continuar praticando.'
-          ]
-        }
-      ],
-      recipes: [
-        {
-          title: 'Bowl de frango, arroz e legumes',
-          category: 'Almoço',
-          time: '25 minutos',
-          ingredients: ['Frango em cubos', 'Arroz cozido', 'Cenoura', 'Brócolis', 'Azeite, alho e limão'],
-          preparation: 'Tempere e cozinhe o frango. Refogue rapidamente os legumes. Sirva com arroz e finalize com limão.'
-        },
-        {
-          title: 'Omelete colorida',
-          category: 'Café da manhã ou jantar',
-          time: '10 minutos',
-          ingredients: ['2 ovos', 'Tomate picado', 'Espinafre ou cheiro-verde', 'Cebola', 'Azeite'],
-          preparation: 'Bata os ovos, misture os vegetais e cozinhe em frigideira untada até firmar dos dois lados.'
-        },
-        {
-          title: 'Salada de grão-de-bico',
-          category: 'Almoço ou acompanhamento',
-          time: '15 minutos',
-          ingredients: ['Grão-de-bico cozido', 'Tomate', 'Pepino', 'Cebola roxa', 'Limão e azeite'],
-          preparation: 'Misture os ingredientes picados, tempere com limão e azeite e mantenha refrigerado até servir.'
-        },
-        {
-          title: 'Iogurte com fruta e aveia',
-          category: 'Lanche',
-          time: '5 minutos',
-          ingredients: ['Iogurte natural', 'Banana ou outra fruta', 'Aveia', 'Canela (opcional)'],
-          preparation: 'Coloque o iogurte em uma tigela, acrescente a fruta picada, a aveia e a canela.'
-        }
-      ],
-      note: 'Receitas gerais e adaptáveis. Ajuste ingredientes às suas preferências, alergias e necessidades individuais.'
-    });
+    return res.json(premiumContent);
   } catch (error) {
     console.error('Erro ao verificar conteúdo Premium:', error);
     return res.status(500).json({ error: 'Não foi possível verificar o acesso Premium.' });
+  }
+});
+
+app.post('/api/subscription/cancel', requireAuth, async (req, res) => {
+  try {
+    const sub = await activeSub(req.session.userId);
+    if (!sub) return res.status(404).json({ error: 'Você não tem uma assinatura Premium ativa.' });
+    if (!process.env.MP_ACCESS_TOKEN || !process.env.MP_ACCESS_TOKEN.trim()) {
+      return res.status(503).json({ error: 'Pagamentos não configurados. Fale com o suporte para cancelar.' });
+    }
+
+    if (sub.mp_preapproval_id) {
+      const response = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(sub.mp_preapproval_id)}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        console.error('Erro ao cancelar assinatura no Mercado Pago:', response.status, detail);
+        return res.status(502).json({ error: 'O Mercado Pago não confirmou o cancelamento. Tente novamente em alguns minutos.' });
+      }
+    }
+
+    await pool.query(
+      `UPDATE public.subscriptions SET status = 'cancelled', updated_at = NOW()
+       WHERE user_id = $1 AND status = 'authorized'`,
+      [req.session.userId]
+    );
+    return res.json({ ok: true, message: 'Assinatura cancelada. Não haverá novas cobranças.' });
+  } catch (error) {
+    console.error('Falha ao cancelar assinatura:', error);
+    return res.status(500).json({ error: 'Não foi possível cancelar a assinatura agora.' });
   }
 });
 
@@ -1115,14 +870,8 @@ async function iniciar() {
   `);
   await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON public.password_reset_tokens(user_id)');
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS public.nutri_ai_usage (
-      user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-      usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
-      question_count INTEGER NOT NULL DEFAULT 0 CHECK (question_count >= 0),
-      PRIMARY KEY (user_id, usage_date)
-    )
-  `);
+  await pool.query('ALTER TABLE public.users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ');
+
   // Testa a conexão antes de abrir a aplicação.
   const check = await pool.query('SELECT 1');
   if (check.rowCount !== 1) throw new Error('Não foi possível validar a conexão com o Supabase.');
@@ -1130,7 +879,7 @@ async function iniciar() {
   const server = app.listen(PORT, () => {
     console.log(`Projeto Seca Saudável em http://localhost:${PORT}`);
     console.log('Banco de dados: Supabase PostgreSQL');
-    console.log('Sessões: SQLite local (sessions.sqlite)');
+    console.log('Sessões: PostgreSQL (public.user_sessions)');
     console.log('Webhook Mercado Pago configurado em:', MP_WEBHOOK_URL);
     sincronizarAssinaturasPendentes();
     setInterval(sincronizarAssinaturasPendentes, 5 * 60 * 1000);

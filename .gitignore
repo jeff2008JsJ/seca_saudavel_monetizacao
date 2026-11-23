@@ -1,17 +1,15 @@
-node_modules/
-.env
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
+# Credenciais
 .env
 .env.*
 !.env.example
 
+# Bancos de dados
 *.sqlite
 *.sqlite3
 *.sqlite-wal
 *.sqlite-shm
 
+# Dependências e arquivos temporários
 node_modules/
 .vs/
 *.log

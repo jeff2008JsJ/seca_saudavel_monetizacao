@@ -1,72 +1,66 @@
-# Projeto Seca Saudável 4.0 — Monetização
+# Projeto Seca Saudável 4.0
 
-Pacote inicial de integração com assinatura mensal Premium de R$ 19,90 via API de Assinaturas do Mercado Pago.
+Web app do desafio de 30 dias com cadastro, sincronização de progresso e assinatura Premium de R$ 19,90/mês via Mercado Pago.
 
-## O que este pacote entrega
+## O que mudou na versão 4.0
 
-- Aplicativo web original em `index.html`.
-- Cadastro e login com senha armazenada como hash bcrypt.
-- Sessões armazenadas em SQLite.
-- Endpoint no servidor para criar assinatura recorrente de R$ 19,90/mês no Mercado Pago.
-- Webhook com validação HMAC da assinatura `x-signature`.
-- Liberação de exemplo de conteúdo Premium somente no servidor quando a assinatura estiver `authorized`.
-- Banco SQLite para usuários e assinaturas.
+- **Página de venda** na aba Início para visitantes: benefícios, comparação Grátis × Premium, perguntas frequentes e botões "Começar grátis" / "Assinar Premium".
+- **Premium com conteúdo real** (`premium-content.js`): 12 receitas, 7 cardápios extras, plano de treino de 4 semanas e 4 desafios bônus. O conteúdo só sai do servidor para assinaturas `authorized`.
+- **Cancelamento pelo site**: botão "Cancelar assinatura" na aba Conta (`POST /api/subscription/cancel`, cancela no Mercado Pago).
+- **Termos de uso** (`/termos`) e **Política de privacidade/LGPD** (`/privacidade`), com aceite obrigatório no cadastro (gravado em `users.terms_accepted_at`).
+- **Sessões no PostgreSQL** (tabela `public.user_sessions`, criada automaticamente): ninguém é deslogado a cada deploy.
+- **Segurança**: cabeçalhos HTTP com `helmet` (CSP, anti-clickjacking, HSTS em produção), proteção CSRF por verificação de origem, nova sessão a cada login/cadastro e exigência de `SESSION_SECRET` forte em produção. Só a pasta `public/` é servida como arquivo estático.
+- **Correções**: barra vazia no topo para visitantes, peso/altura/meta fixos no código, aba "Conteúdo" pública (o editor dos dias agora fica dentro da aba 30 dias), favicon e prévia de compartilhamento (WhatsApp/Instagram).
+- **Celular**: barra de navegação fixa embaixo (Início, 30 dias, Academia, Progresso e "Mais") e Academia dividida em sub-abas (Planos, Exercícios, Minha semana, Evolução).
 
 ## Requisitos
 
 - Node.js 20 ou superior.
-- Conta Mercado Pago e aplicação criada em Mercado Pago Developers.
-- Hospedagem com HTTPS e armazenamento persistente para o banco SQLite.
+- Banco PostgreSQL (Supabase).
+- Conta Mercado Pago com aplicação criada.
+- Hospedagem com HTTPS (ex.: Render).
 
 ## Executar localmente
 
-1. Extraia o ZIP.
-2. Abra um terminal nesta pasta.
-3. Execute `npm install`.
-4. Copie `.env.example` para `.env`.
-5. Preencha `SESSION_SECRET`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e `BASE_URL`.
-6. Execute `npm start`.
-7. Abra `http://localhost:3000`.
+1. Abra um terminal nesta pasta.
+2. Execute `npm install`.
+3. Copie `.env.example` para `.env` e preencha os valores.
+4. Execute `npm start`.
+5. Abra `http://localhost:3000`.
 
-**Não compartilhe o arquivo `.env` nem coloque o Access Token no HTML.**
+**Não compartilhe o arquivo `.env` nem coloque tokens no HTML.**
 
-## Configurar Mercado Pago
+## Publicar uma nova versão (Render)
 
-1. Entre em Mercado Pago Developers e crie/seleciona sua aplicação.
-2. Copie o Access Token de teste para validar a integração. Para produção, use credenciais de produção somente após os testes.
-3. Configure a URL de webhook como `https://SEU-DOMINIO/api/webhooks/mercadopago`.
-4. Selecione o evento de assinatura/vinculação de assinatura (`subscription_preapproval`) conforme as opções do painel.
-5. Copie a chave secreta do webhook para `MP_WEBHOOK_SECRET`.
-6. Configure `BASE_URL` com o domínio público HTTPS.
-7. Teste cadastro, login, checkout, retorno e atualização do status via webhook antes de receber pagamentos reais.
+1. Envie os arquivos desta pasta para o repositório/serviço (sem `.env`, sem `node_modules`).
+2. Confira as variáveis de ambiente no painel do Render: `NODE_ENV=production`, `BASE_URL`, `SESSION_SECRET` (mínimo de 32 caracteres), `DATABASE_URL`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `MP_WEBHOOK_URL`, `RESEND_API_KEY` e `RESEND_FROM_EMAIL`.
+3. Comando de build: `npm install`. Comando de start: `npm start`.
+4. No primeiro start, o servidor cria sozinho a tabela `user_sessions` e a coluna `users.terms_accepted_at`.
+5. Depois da primeira publicação desta versão, todos precisarão entrar de novo uma única vez (as sessões antigas ficavam no SQLite).
 
-O backend usa `POST https://api.mercadopago.com/preapproval` para criar a assinatura recorrente e `GET /preapproval/{id}` para consultar o estado notificado. O preço e a frequência são definidos no servidor, não pelo navegador.
+## Antes de vender
 
-## Importante antes de vender
+- Edite `public/termos.html` e `public/privacidade.html` e troque os campos entre colchetes (nome, CPF/CNPJ, e-mail e data). Se possível, peça revisão a um profissional jurídico.
+- Para mudar receitas, cardápios ou treinos do Premium, edite `premium-content.js`.
+- Teste cadastro, assinatura, retorno, webhook e cancelamento com credenciais de teste do Mercado Pago antes de usar as de produção.
 
-Este pacote é um ponto de partida técnico, não uma loja pronta para produção. Antes de publicar:
+## Mercado Pago
 
-- Use HTTPS, `SESSION_SECRET` forte, credenciais de produção e armazenamento persistente/backup.
-- Configure política de privacidade, termos de uso, política de cancelamento e atendimento ao consumidor.
-- Implemente confirmação/verificação de e-mail, recuperação de senha, proteção CSRF e controles antifraude.
-- Implemente rotina para sincronizar status de assinatura e pagamentos recorrentes, incluindo atraso, pausa, cancelamento e chargeback, além do webhook.
-- O painel de conteúdo original ainda é local; para vender conteúdo exclusivo, mova todos os materiais pagos para endpoints protegidos no servidor. O endpoint `/api/premium/content` é apenas um exemplo seguro de autorização, não um catálogo final.
-- O SQLite é adequado para testes e implantação pequena com disco persistente; para escala, prefira banco gerenciado como PostgreSQL.
-- Não use credenciais de produção antes de testar o fluxo integral em ambiente de teste.
+1. Configure a URL de webhook como `https://SEU-DOMINIO/api/webhooks/mercadopago`.
+2. Selecione o evento de assinatura (`subscription_preapproval`).
+3. Copie a chave secreta do webhook para `MP_WEBHOOK_SECRET`.
+
+O backend usa `POST /preapproval` para criar a assinatura, `GET /preapproval/{id}` para consultar o status e `PUT /preapproval/{id}` com `status: cancelled` para cancelar. O preço é definido no servidor.
 
 ## Endpoints
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
+- `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/logout`
+- `POST /api/auth/forgot-password` · `POST /api/auth/reset-password`
 - `GET /api/me`
-- `POST /api/subscription/checkout`
-- `GET /api/premium/content` (protegido)
+- `GET|PUT /api/gym/data` · `GET|PUT /api/app-state`
+- `POST /api/subscription/checkout` · `POST /api/subscription/cancel`
+- `GET /api/premium/content` (somente assinantes)
 - `POST /api/webhooks/mercadopago`
 - `GET /health`
 
-## Documentação oficial
-
-- Assinaturas: https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/overview
-- Criar assinatura: https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/create-preapproval/post
-- Webhooks: https://www.mercadopago.com.br/developers/pt/docs/subscriptions/additional-content/your-integrations/notifications/webhooks
+Requisições que alteram dados (`POST`/`PUT`) precisam vir do próprio site em JSON; chamadas de outros domínios recebem 403. O webhook do Mercado Pago é validado pela assinatura `x-signature`.
