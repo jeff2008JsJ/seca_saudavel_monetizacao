@@ -1,6 +1,23 @@
-# Projeto Seca Saudável 4.0
+# Projeto Seca Saudável 4.4
 
 Web app do desafio de 30 dias com cadastro, sincronização de progresso e assinatura Premium de R$ 19,90/mês via Mercado Pago.
+
+## O que mudou na versão 4.4
+
+- **Checklist de treino:** cada exercício dos planos prontos, da rotina personalizada e do dia em "Minha semana" tem uma caixa ✓ para marcar quando terminar. Uma barra mostra o progresso (ex.: "3 de 5 feitos").
+- **Conclusão automática:** quando todos os exercícios do treino estão marcados, o treino entra no histórico e o dia fica como "✓ Concluído" no calendário.
+- As marcações ficam salvas no navegador e são sincronizadas com a conta de quem está logado. Dias futuros não podem ser marcados.
+
+## O que mudou na versão 4.3
+
+- **Vídeos em todos os exercícios:** a biblioteca da Academia tem 91 exercícios, e cada um tem um vídeo demonstrativo do YouTube incorporado (`public/exercises.js`). O vídeo só carrega quando a pessoa toca em “Assistir”.
+- **Vídeo direto dos planos:** nos planos prontos e na rotina gerada, tocar no exercício abre o vídeo correspondente.
+- **Cronômetro de descanso:** botões de 30, 60 e 90 segundos, com aviso sonoro e vibração no celular.
+- **Busca melhorada:** a busca ignora acentos e também encontra nomes alternativos (ex.: “triceps”, “hip thrust”, “voador”).
+- A biblioteca não depende mais da API externa wger.
+
+### Como trocar ou adicionar um vídeo
+Abra `public/exercises.js` e altere o campo `video` do exercício. Use o código que aparece depois de `watch?v=` no link do YouTube. Exemplo: em `https://www.youtube.com/watch?v=zgk71dUUt0Y`, o código é `zgk71dUUt0Y`.
 
 ## O que mudou na versão 4.0
 

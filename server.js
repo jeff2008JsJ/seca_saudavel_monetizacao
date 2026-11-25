@@ -94,7 +94,7 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'https://wger.de'],
+      connectSrc: ["'self'"],
       frameSrc: ['https://www.youtube-nocookie.com', 'https://www.youtube.com'],
       fontSrc: ["'self'", 'data:'],
       objectSrc: ["'none'"],
@@ -854,7 +854,7 @@ async function sincronizarAssinaturasPendentes() {
   }
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, app: 'Projeto Seca Saudável', version: '4.2.0' }));
+app.get('/health', (_req, res) => res.json({ ok: true, app: 'Projeto Seca Saudável', version: '4.4.0' }));
 
 async function iniciar() {
   // Tabela pequena e separada para tokens temporários de recuperação.
