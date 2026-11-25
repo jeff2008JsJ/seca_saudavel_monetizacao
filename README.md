@@ -1,6 +1,26 @@
-# Projeto Seca Saudável 4.4
+# Projeto Seca Saudável 4.5
 
 Web app do desafio de 30 dias com cadastro, sincronização de progresso e assinatura Premium de R$ 19,90/mês via Mercado Pago.
+
+## O que mudou na versão 4.5
+
+- **Plano com IA (Premium):** nova sub-aba "🤖 Plano com IA" na Academia (também acessível pelo botão "Montar com IA" nos Planos e em Refeições). O assinante responde objetivo, nível, dias, equipamentos, alimentos preferidos, restrições e limitações, e a IA monta um treino semanal e/ou um cardápio de 3 dias.
+- Os exercícios gerados usam os nomes da biblioteca, então aparecem com "▶ Vídeo" e com o ✓ de concluído. O plano fica salvo e sincronizado com a conta.
+- Só assinantes Premium ativos podem gerar. Cada assinante tem um limite diário (padrão 3). Se a IA falhar, a tentativa não é descontada.
+- O plano é educativo e exibe aviso de que não substitui nutricionista, médico ou educador físico.
+
+### Como configurar a IA
+
+1. Crie uma chave em **uma** das opções:
+   - OpenAI: https://platform.openai.com/api-keys (precisa adicionar créditos em Billing).
+   - Google Gemini: https://aistudio.google.com/apikey (tem uso gratuito limitado).
+2. No Render (Environment) ou no `.env`, defina:
+   - OpenAI: `AI_PROVIDER=openai` e `OPENAI_API_KEY=sua_chave`
+   - Gemini: `AI_PROVIDER=gemini` e `GEMINI_API_KEY=sua_chave`
+3. Opcional: `AI_DAILY_LIMIT` (planos por assinante por dia, padrão 3) e `AI_MODEL` (padrão `gpt-6-luna` na OpenAI e `gemini-3.5-flash-lite` no Gemini).
+4. Reinicie o serviço. A tabela `ai_usage` é criada automaticamente no banco.
+
+Sem chave configurada, o site funciona normalmente e a sub-aba mostra "Em breve" para os assinantes. A chave fica só no servidor; nunca coloque no `index.html`. Defina um limite de gastos no painel do provedor para evitar surpresas.
 
 ## O que mudou na versão 4.4
 

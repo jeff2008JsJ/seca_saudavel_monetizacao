@@ -5,6 +5,7 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const premiumContent = require('./premium-content');
+const ai = require('./ai');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -111,7 +112,7 @@ app.use(helmet({
 // Página principal: o BASE_URL é inserido nas meta tags de compartilhamento.
 const fs = require('fs');
 const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('%BASE_URL%', BASE_URL);
-app.get('/', (_req, res) => res.type('html').send(indexHtml));
+app.get('/', (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(indexHtml));
 
 // Somente a pasta public/ é servida como arquivos estáticos (nunca a raiz do projeto).
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: isProd ? '1d' : 0, extensions: ['html'] }));
@@ -382,7 +383,7 @@ app.get('/api/gym/data', requireAuth, async (req, res) => {
 
 app.put('/api/gym/data', requireAuth, async (req, res) => {
   const body = req.body && typeof req.body === 'object' ? req.body : {};
-  const allowed = ['routine', 'calendar', 'logs', 'performance', 'bodyEvolution'];
+  const allowed = ['routine', 'calendar', 'logs', 'performance', 'bodyEvolution', 'aiPlan'];
   const data = {};
 
   for (const key of allowed) {
@@ -854,7 +855,72 @@ async function sincronizarAssinaturasPendentes() {
   }
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, app: 'Projeto Seca Saudável', version: '4.4.0' }));
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas solicitações seguidas. Aguarde alguns minutos.' }
+});
+
+function todayInBrazil() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
+async function aiUsageToday(userId) {
+  const result = await pool.query('SELECT count FROM public.ai_usage WHERE user_id = $1 AND day = $2', [userId, todayInBrazil()]);
+  return result.rows[0]?.count || 0;
+}
+
+app.get('/api/ai/status', async (req, res) => {
+  const cfg = ai.aiConfig();
+  if (!req.session.userId) return res.json({ enabled: !!cfg, loggedIn: false, premium: false });
+  try {
+    const premium = !!(await activeSub(req.session.userId));
+    const used = premium ? await aiUsageToday(req.session.userId) : 0;
+    const limit = cfg?.dailyLimit || 0;
+    return res.json({ enabled: !!cfg, loggedIn: true, premium, limit, used, remaining: Math.max(0, limit - used) });
+  } catch (error) {
+    console.error('Erro ao consultar status da IA:', error);
+    return res.status(500).json({ error: 'Não foi possível consultar a IA agora.' });
+  }
+});
+
+app.post('/api/ai/plan', requireAuth, aiLimiter, async (req, res) => {
+  const cfg = ai.aiConfig();
+  if (!cfg) return res.status(503).json({ error: 'O gerador com IA ainda não foi configurado neste site.' });
+  const userId = req.session.userId;
+  let reserved = false;
+  try {
+    if (!(await activeSub(userId))) {
+      return res.status(403).json({ error: 'O plano com IA é exclusivo para assinantes Premium.' });
+    }
+    const day = todayInBrazil();
+    const reserve = await pool.query(
+      `INSERT INTO public.ai_usage (user_id, day, count) VALUES ($1, $2, 1)
+       ON CONFLICT (user_id, day) DO UPDATE SET count = public.ai_usage.count + 1
+       WHERE public.ai_usage.count < $3
+       RETURNING count`,
+      [userId, day, cfg.dailyLimit]
+    );
+    if (!reserve.rowCount) {
+      return res.status(429).json({ error: `Você já usou os ${cfg.dailyLimit} planos com IA de hoje. Tente novamente amanhã.` });
+    }
+    reserved = true;
+    const input = ai.validateRequest(req.body);
+    const plan = await ai.generatePlan(input, cfg);
+    const used = reserve.rows[0].count;
+    return res.json({ plan: { ...plan, criadoEm: new Date().toISOString(), entrada: input }, limit: cfg.dailyLimit, used, remaining: Math.max(0, cfg.dailyLimit - used) });
+  } catch (error) {
+    console.error('Erro ao gerar plano com IA:', error.message);
+    if (reserved) {
+      await pool.query('UPDATE public.ai_usage SET count = GREATEST(count - 1, 0) WHERE user_id = $1 AND day = $2', [userId, todayInBrazil()]).catch(() => {});
+    }
+    return res.status(502).json({ error: 'A IA não conseguiu montar o plano agora. Tente novamente em instantes; esta tentativa não foi descontada do seu limite.' });
+  }
+});
+
+app.get('/health', (_req, res) => res.json({ ok: true, app: 'Projeto Seca Saudável', version: '4.5.0' }));
 
 async function iniciar() {
   // Tabela pequena e separada para tokens temporários de recuperação.
@@ -871,6 +937,15 @@ async function iniciar() {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON public.password_reset_tokens(user_id)');
 
   await pool.query('ALTER TABLE public.users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS public.ai_usage (
+      user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+      day DATE NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, day)
+    )
+  `);
 
   // Testa a conexão antes de abrir a aplicação.
   const check = await pool.query('SELECT 1');
