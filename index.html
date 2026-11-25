@@ -322,7 +322,833 @@
   <div id="premiumArea" hidden><span class="pill">PREMIUM ATIVO</span><h3>Conteúdo exclusivo</h3><div id="premiumContent" class="premium-content"></div></div>
 </div>
 </section>
-</main><div id="workoutToast" class="workout-toast" role="status" aria-live="polite" hidden></div><div id="restTimer" class="rest-timer" role="timer" hidden>⏱️ Descanso <b>0:00</b><button type="button" onclick="stopRest()" aria-label="Parar cronômetro">×</button></div><footer>Projeto Seca Saudável • Conteúdo informativo para adultos • Sem promessas de emagrecimento rápido<br><a href="/termos">Termos de uso</a> • <a href="/privacidade">Política de privacidade</a></footer><script src="/exercises.js?v=4.5"></script><script>
+</main><div id="workoutToast" class="workout-toast" role="status" aria-live="polite" hidden></div><div id="restTimer" class="rest-timer" role="timer" hidden>⏱️ Descanso <b>0:00</b><button type="button" onclick="stopRest()" aria-label="Parar cronômetro">×</button></div><footer>Projeto Seca Saudável • Conteúdo informativo para adultos • Sem promessas de emagrecimento rápido<br><a href="/termos">Termos de uso</a> • <a href="/privacidade">Política de privacidade</a></footer><script id="exerciseLibrary">
+/* Biblioteca de exercícios com vídeos demonstrativos do YouTube (ID do vídeo em "video"). */
+window.EXERCISE_LIBRARY=[
+{
+"name": "Agachamento livre",
+"group": "Pernas e glúteos",
+"equipment": "Peso corporal ou barra",
+"video": "zgk71dUUt0Y",
+"aliases": [
+"agachamento",
+"agachamento com amplitude confortavel",
+"agachamento ou sentar-levantar"
+],
+"description": "Pés na largura dos ombros, desça levando o quadril para trás como se fosse sentar, mantendo o peito aberto e os joelhos alinhados com os pés. Suba empurrando o chão."
+},
+{
+"name": "Agachamento com halteres",
+"group": "Pernas e glúteos",
+"equipment": "Halteres",
+"video": "3wnMTEVx5-I",
+"aliases": [],
+"description": "Segure um halter em cada mão ao lado do corpo. Desça com o tronco firme até onde mantiver a postura e suba controlando o movimento."
+},
+{
+"name": "Agachamento goblet",
+"group": "Pernas e glúteos",
+"equipment": "Halter",
+"video": "ge1vdJRP0UA",
+"aliases": [],
+"description": "Segure um halter junto ao peito com as duas mãos. Desça mantendo os cotovelos entre os joelhos e o tronco ereto, depois suba."
+},
+{
+"name": "Agachamento no Smith",
+"group": "Pernas e glúteos",
+"equipment": "Máquina Smith",
+"video": "EiZnx6a0zyw",
+"aliases": [
+"agachamento guiado"
+],
+"description": "Apoie a barra guiada nos ombros, pés um pouco à frente do corpo. Desça com controle e suba sem travar os joelhos."
+},
+{
+"name": "Agachamento sumô",
+"group": "Pernas e glúteos",
+"equipment": "Halter",
+"video": "Zd50IL3DCdc",
+"aliases": [],
+"description": "Pés bem afastados e pontas levemente para fora. Segure o halter à frente do corpo e desça mantendo os joelhos apontados para os pés."
+},
+{
+"name": "Sentar e levantar da cadeira",
+"group": "Pernas e glúteos",
+"equipment": "Cadeira",
+"video": "30Tb7uThsX0",
+"aliases": [
+"agachamento com cadeira",
+"agachamento na cadeira",
+"sentar-levantar"
+],
+"description": "Sente na beirada da cadeira com os pés firmes no chão. Levante sem usar as mãos, se possível, e sente devagar."
+},
+{
+"name": "Leg press",
+"group": "Pernas e glúteos",
+"equipment": "Máquina",
+"video": "nY8UsiAqwds",
+"aliases": [
+"agachamento ou leg press",
+"leg press ou agachamento na cadeira"
+],
+"description": "Costas bem apoiadas no encosto e pés na plataforma na largura do quadril. Desça até um ângulo confortável e empurre sem travar os joelhos."
+},
+{
+"name": "Cadeira extensora",
+"group": "Pernas e glúteos",
+"equipment": "Máquina",
+"video": "el3oHblB5DM",
+"aliases": [],
+"description": "Ajuste o encosto para o joelho ficar alinhado ao eixo da máquina. Estenda as pernas e volte devagar."
+},
+{
+"name": "Extensão de joelho sentado",
+"group": "Pernas e glúteos",
+"equipment": "Peso corporal",
+"video": "gZdjh0rTS8U",
+"aliases": [
+"extensao de joelho sentado sem carga"
+],
+"description": "Sentado numa cadeira, estenda uma perna até ficar reta, segure 1 a 2 segundos e desça devagar. Alterne as pernas."
+},
+{
+"name": "Mesa flexora",
+"group": "Pernas e glúteos",
+"equipment": "Máquina",
+"video": "2-ULaRrQa7c",
+"aliases": [],
+"description": "Deite de bruços com o joelho alinhado ao eixo da máquina. Flexione as pernas trazendo o rolo em direção ao glúteo e volte com controle."
+},
+{
+"name": "Levantamento terra romeno",
+"group": "Pernas e glúteos",
+"equipment": "Barra ou halteres",
+"video": "3RmD9VyZZjY",
+"aliases": [
+"levantamento terra romeno leve",
+"levantamento romeno",
+"levantamento romeno leve",
+"levantamento terra romeno com halteres",
+"levantamento romeno com halteres"
+],
+"description": "Com joelhos levemente flexionados, leve o quadril para trás descendo o peso rente às pernas, mantendo a coluna neutra. Suba contraindo os glúteos."
+},
+{
+"name": "Bom dia sem carga",
+"group": "Pernas e glúteos",
+"equipment": "Peso corporal",
+"video": "QtUNJF_ccss",
+"aliases": [
+"bom dia"
+],
+"description": "Mãos atrás da cabeça ou cruzadas no peito. Incline o tronco à frente levando o quadril para trás, com a coluna reta, e volte."
+},
+{
+"name": "Passada",
+"group": "Pernas e glúteos",
+"equipment": "Peso corporal ou halteres",
+"video": "sQ5RjbpPirY",
+"aliases": [
+"afundo",
+"passada assistida",
+"afundo assistido",
+"passada estacionaria com apoio"
+],
+"description": "Dê um passo à frente e desça até os dois joelhos formarem cerca de 90°. Use um apoio para equilíbrio se precisar e volte à posição inicial."
+},
+{
+"name": "Afundo búlgaro",
+"group": "Pernas e glúteos",
+"equipment": "Banco e halteres",
+"video": "IGf9fR4Y7Iw",
+"aliases": [],
+"description": "Apoie o peito do pé de trás num banco. Desça o corpo na vertical com o peso na perna da frente e suba."
+},
+{
+"name": "Elevação pélvica",
+"group": "Pernas e glúteos",
+"equipment": "Banco e barra",
+"video": "ptK0azwOXwM",
+"aliases": [
+"hip thrust"
+],
+"description": "Costas apoiadas no banco e pés firmes no chão. Eleve o quadril até alinhar o tronco às coxas, contraia os glúteos e desça."
+},
+{
+"name": "Ponte de glúteos",
+"group": "Pernas e glúteos",
+"equipment": "Peso corporal",
+"video": "Luvxb1b_Thw",
+"aliases": [
+"elevacao de quadril"
+],
+"description": "Deitado de costas, joelhos flexionados e pés no chão. Eleve o quadril contraindo os glúteos, segure um instante e desça devagar."
+},
+{
+"name": "Extensão de quadril em quatro apoios",
+"group": "Pernas e glúteos",
+"equipment": "Peso corporal",
+"video": "fpGSfZmYhfI",
+"aliases": [
+"coice de gluteo"
+],
+"description": "Em quatro apoios, estenda uma perna para trás e para cima sem arquear a lombar. Volte e repita do outro lado."
+},
+{
+"name": "Cadeira abdutora",
+"group": "Pernas e glúteos",
+"equipment": "Máquina",
+"video": "e2gmqTG1OgQ",
+"aliases": [],
+"description": "Sentado com as costas apoiadas, afaste as pernas contra a resistência e volte devagar."
+},
+{
+"name": "Cadeira adutora",
+"group": "Pernas e glúteos",
+"equipment": "Máquina",
+"video": "Wf602gn_9zU",
+"aliases": [],
+"description": "Sentado com as costas apoiadas, aproxime as pernas contra a resistência e volte devagar."
+},
+{
+"name": "Panturrilha em pé",
+"group": "Pernas e glúteos",
+"equipment": "Máquina ou peso corporal",
+"video": "JPPcsPEgGRM",
+"aliases": [
+"panturrilha",
+"elevacao de panturrilha em pe"
+],
+"description": "Fique na ponta dos pés o mais alto possível, segure um instante e desça devagar. Use uma parede para equilíbrio."
+},
+{
+"name": "Panturrilha sentada",
+"group": "Pernas e glúteos",
+"equipment": "Máquina",
+"video": "qP9GavDpYmw",
+"aliases": [],
+"description": "Sentado com o apoio sobre as coxas, eleve os calcanhares e desça alongando a panturrilha."
+},
+{
+"name": "Supino reto com barra",
+"group": "Peito",
+"equipment": "Barra e banco",
+"video": "EZMYCLKuGow",
+"aliases": [
+"supino reto"
+],
+"description": "Deitado no banco, pés firmes no chão e escápulas encaixadas. Desça a barra até a linha do peito e empurre para cima."
+},
+{
+"name": "Supino com halteres",
+"group": "Peito",
+"equipment": "Halteres e banco",
+"video": "Cjh2fIMQHk0",
+"aliases": [],
+"description": "Deitado no banco, desça os halteres ao lado do peito com os cotovelos a cerca de 45° do tronco e empurre para cima."
+},
+{
+"name": "Supino máquina",
+"group": "Peito",
+"equipment": "Máquina",
+"video": "bKSvckCwvh4",
+"aliases": [
+"supino maquina ou flexao inclinada"
+],
+"description": "Ajuste o banco para as pegadas ficarem na altura do peito. Empurre à frente sem travar os cotovelos e volte devagar."
+},
+{
+"name": "Supino inclinado com halteres",
+"group": "Peito",
+"equipment": "Halteres e banco",
+"video": "rCPwrZkrVVQ",
+"aliases": [
+"supino inclinado",
+"supino inclinado maquina"
+],
+"description": "Banco inclinado a cerca de 30°. Desça os halteres na direção da parte de cima do peito e empurre."
+},
+{
+"name": "Supino declinado",
+"group": "Peito",
+"equipment": "Barra e banco",
+"video": "J2g6qPBJfqo",
+"aliases": [],
+"description": "No banco declinado, com as pernas presas, desça a barra até a parte de baixo do peito e empurre."
+},
+{
+"name": "Supino com halteres no chão",
+"group": "Peito",
+"equipment": "Halteres",
+"video": "u9CCVevEkuY",
+"aliases": [
+"floor press"
+],
+"description": "Deitado no chão, desça os halteres até os braços tocarem o solo e empurre para cima."
+},
+{
+"name": "Crucifixo com halteres",
+"group": "Peito",
+"equipment": "Halteres e banco",
+"video": "uDMmccuPVPQ",
+"aliases": [],
+"description": "Deitado, braços estendidos com cotovelos levemente dobrados. Abra os braços em arco até sentir o peito alongar e volte."
+},
+{
+"name": "Crossover na polia",
+"group": "Peito",
+"equipment": "Polia",
+"video": "jqTlJt3JXzQ",
+"aliases": [],
+"description": "Entre as polias, um pé à frente. Traga as mãos à frente do corpo em arco, cruzando levemente, e volte com controle."
+},
+{
+"name": "Peck deck",
+"group": "Peito",
+"equipment": "Máquina",
+"video": "QJT52jGuyVE",
+"aliases": [
+"voador"
+],
+"description": "Sentado com as costas apoiadas, aproxime os braços à frente do peito e volte devagar."
+},
+{
+"name": "Flexão de braços",
+"group": "Peito",
+"equipment": "Peso corporal",
+"video": "M9mOisTRB1A",
+"aliases": [],
+"description": "Mãos um pouco mais abertas que os ombros e corpo alinhado da cabeça aos pés. Desça o peito até perto do chão e empurre."
+},
+{
+"name": "Flexão inclinada",
+"group": "Peito",
+"equipment": "Banco ou apoio",
+"video": "COpDKiH4byU",
+"aliases": [],
+"description": "Mãos apoiadas num banco ou degrau e corpo reto. Desça o peito até o apoio e empurre."
+},
+{
+"name": "Flexão na parede",
+"group": "Peito",
+"equipment": "Parede",
+"video": "-eDl1dcGc8s",
+"aliases": [
+"flexao inclinada na parede",
+"flexao fechada na parede"
+],
+"description": "Em pé, de frente para a parede, mãos na altura do peito. Dobre os cotovelos aproximando o peito da parede e empurre."
+},
+{
+"name": "Flexão com joelhos apoiados",
+"group": "Peito",
+"equipment": "Peso corporal",
+"video": "oTmPth0J55E",
+"aliases": [],
+"description": "Como na flexão tradicional, mas com os joelhos no chão. Mantenha o tronco alinhado do quadril à cabeça."
+},
+{
+"name": "Pullover",
+"group": "Peito",
+"equipment": "Halter e banco",
+"video": "-KaMXMMIVrU",
+"aliases": [],
+"description": "Deitado no banco, segure um halter acima do peito. Leve-o para trás da cabeça com os braços quase retos e volte."
+},
+{
+"name": "Puxada alta pela frente",
+"group": "Costas",
+"equipment": "Polia",
+"video": "94seKBQlxLk",
+"aliases": [
+"puxada frontal",
+"puxada alta",
+"puxada frontal ou puxada com elastico"
+],
+"description": "Sentado com as coxas presas, puxe a barra até a parte de cima do peito levando os cotovelos para baixo. Volte estendendo os braços."
+},
+{
+"name": "Remada baixa",
+"group": "Costas",
+"equipment": "Polia",
+"video": "f8AVh4VBbos",
+"aliases": [
+"remada baixa ou remada com elastico"
+],
+"description": "Sentado, coluna reta, puxe o triângulo em direção ao abdômen aproximando as escápulas. Volte devagar."
+},
+{
+"name": "Remada curvada",
+"group": "Costas",
+"equipment": "Barra",
+"video": "TfxJMertfsw",
+"aliases": [],
+"description": "Tronco inclinado à frente e coluna neutra. Puxe a barra em direção ao umbigo e desça com controle."
+},
+{
+"name": "Remada curvada com halteres",
+"group": "Costas",
+"equipment": "Halteres",
+"video": "Vk6c7CjtM14",
+"aliases": [],
+"description": "Com o tronco inclinado e a coluna neutra, puxe os halteres ao lado do corpo levando os cotovelos para trás."
+},
+{
+"name": "Remada unilateral",
+"group": "Costas",
+"equipment": "Halter",
+"video": "m4h4jT9patY",
+"aliases": [
+"remada unilateral com halter",
+"serrote"
+],
+"description": "Apoie um joelho e uma mão no banco. Puxe o halter em direção ao quadril e desça alongando as costas."
+},
+{
+"name": "Remada cavalinho",
+"group": "Costas",
+"equipment": "Barra T",
+"video": "T_lUbPfCf6Y",
+"aliases": [],
+"description": "Tronco inclinado, segure a barra T e puxe até o peito, aproximando as escápulas."
+},
+{
+"name": "Remada com elástico",
+"group": "Costas",
+"equipment": "Elástico",
+"video": "I4bnfE0Sz1M",
+"aliases": [
+"remada com elastico"
+],
+"description": "Prenda o elástico à frente na altura do peito. Puxe em direção ao corpo levando os cotovelos para trás e volte devagar."
+},
+{
+"name": "Remada invertida",
+"group": "Costas",
+"equipment": "Barra baixa",
+"video": "UYSAjUGcZLg",
+"aliases": [],
+"description": "Deitado sob uma barra baixa, corpo reto, puxe o peito em direção à barra e desça com controle."
+},
+{
+"name": "Barra fixa",
+"group": "Costas",
+"equipment": "Barra fixa",
+"video": "thg6cGXSlvY",
+"aliases": [],
+"description": "Pendurado na barra, puxe o corpo até o queixo passar a barra e desça devagar. Use elástico ou máquina para ajudar, se precisar."
+},
+{
+"name": "Pulldown com braços retos",
+"group": "Costas",
+"equipment": "Polia",
+"video": "v6-QIOY0nW0",
+"aliases": [],
+"description": "Em pé, braços estendidos à frente, puxe a barra até as coxas mantendo os cotovelos quase retos."
+},
+{
+"name": "Levantamento terra",
+"group": "Costas",
+"equipment": "Barra",
+"video": "50AkPBZwACQ",
+"aliases": [],
+"description": "Barra rente às canelas, coluna neutra. Levante estendendo quadril e joelhos ao mesmo tempo e desça mantendo a barra perto do corpo."
+},
+{
+"name": "Face pull",
+"group": "Costas",
+"equipment": "Polia",
+"video": "z4cDN2oTVxQ",
+"aliases": [],
+"description": "Com a corda na altura do rosto, puxe em direção à testa abrindo os cotovelos e girando os ombros para fora."
+},
+{
+"name": "Rosca direta",
+"group": "Braços",
+"equipment": "Barra",
+"video": "hemxXmD6l4w",
+"aliases": [
+"rosca biceps",
+"rosca"
+],
+"description": "Em pé, cotovelos junto ao corpo. Flexione os braços trazendo a barra até o peito e desça devagar."
+},
+{
+"name": "Rosca direta com halteres",
+"group": "Braços",
+"equipment": "Halteres",
+"video": "c__3LAiXYOk",
+"aliases": [],
+"description": "Em pé, cotovelos junto ao corpo e palmas para a frente. Suba os dois halteres e desça com controle."
+},
+{
+"name": "Rosca alternada",
+"group": "Braços",
+"equipment": "Halteres",
+"video": "S1HAcTVQVYE",
+"aliases": [],
+"description": "Suba um halter de cada vez girando a palma para cima e desça devagar antes de trocar de braço."
+},
+{
+"name": "Rosca martelo",
+"group": "Braços",
+"equipment": "Halteres",
+"video": "0qkQy8V2FC0",
+"aliases": [
+"rosca martelo com halteres"
+],
+"description": "Palmas viradas uma para a outra. Flexione os cotovelos sem afastá-los do corpo e desça devagar."
+},
+{
+"name": "Rosca concentrada",
+"group": "Braços",
+"equipment": "Halter",
+"video": "EEpvOQAAtRo",
+"aliases": [],
+"description": "Sentado, apoie o cotovelo na parte interna da coxa e flexione o braço até o ombro."
+},
+{
+"name": "Rosca Scott",
+"group": "Braços",
+"equipment": "Banco Scott",
+"video": "IOP_evjFaxQ",
+"aliases": [],
+"description": "Braços apoiados no banco Scott, suba a barra ou halter e desça até quase estender o cotovelo."
+},
+{
+"name": "Rosca inversa",
+"group": "Braços",
+"equipment": "Barra leve",
+"video": "jbSr9CzJPmA",
+"aliases": [],
+"description": "Pegada com as palmas para baixo. Flexione os cotovelos mantendo os punhos firmes."
+},
+{
+"name": "Rosca isométrica com toalha",
+"group": "Braços",
+"equipment": "Toalha",
+"video": "UB3RsYI7-RI",
+"aliases": [],
+"description": "Pise no meio de uma toalha e segure as pontas. Puxe para cima com os cotovelos a 90° e mantenha a força por 20 a 30 segundos."
+},
+{
+"name": "Tríceps pulley",
+"group": "Braços",
+"equipment": "Polia",
+"video": "dTqDKC0D6P4",
+"aliases": [
+"triceps na polia",
+"triceps",
+"rosca biceps e triceps na polia",
+"rosca e triceps"
+],
+"description": "Cotovelos junto ao corpo, empurre a barra para baixo até estender os braços e volte até 90°."
+},
+{
+"name": "Tríceps francês",
+"group": "Braços",
+"equipment": "Halter",
+"video": "aRWMYHD-ZIk",
+"aliases": [
+"triceps frances com halter"
+],
+"description": "Segure o halter acima da cabeça. Desça atrás da nuca dobrando os cotovelos e estenda de novo."
+},
+{
+"name": "Tríceps testa",
+"group": "Braços",
+"equipment": "Barra ou halteres",
+"video": "VakpIeaaeXA",
+"aliases": [],
+"description": "Deitado, braços estendidos acima do peito. Dobre os cotovelos levando o peso em direção à testa e estenda."
+},
+{
+"name": "Tríceps coice",
+"group": "Braços",
+"equipment": "Halter",
+"video": "PyKv23F-fVM",
+"aliases": [],
+"description": "Tronco inclinado e cotovelo junto ao corpo. Estenda o braço para trás e volte devagar."
+},
+{
+"name": "Mergulho no banco",
+"group": "Braços",
+"equipment": "Banco",
+"video": "LdfpvZPnUSI",
+"aliases": [],
+"description": "Mãos apoiadas no banco atrás do corpo. Dobre os cotovelos descendo o quadril e empurre para subir."
+},
+{
+"name": "Desenvolvimento com halteres",
+"group": "Ombros",
+"equipment": "Halteres",
+"video": "eufDL9MmF8A",
+"aliases": [
+"desenvolvimento de ombros",
+"desenvolvimento leve",
+"desenvolvimento"
+],
+"description": "Sentado ou em pé, halteres na altura dos ombros. Empurre para cima sem arquear a lombar e desça até a orelha."
+},
+{
+"name": "Desenvolvimento militar",
+"group": "Ombros",
+"equipment": "Barra",
+"video": "aee3VLz4ATQ",
+"aliases": [],
+"description": "Em pé, barra na altura dos ombros. Empurre acima da cabeça com abdômen firme e desça com controle."
+},
+{
+"name": "Arnold press",
+"group": "Ombros",
+"equipment": "Halteres",
+"video": "YghvTx_GI2c",
+"aliases": [
+"desenvolvimento arnold"
+],
+"description": "Comece com as palmas viradas para você. Empurre para cima girando os punhos até as palmas ficarem para a frente."
+},
+{
+"name": "Elevação lateral",
+"group": "Ombros",
+"equipment": "Halteres",
+"video": "IwWvZ0rlNXs",
+"aliases": [
+"elevacao lateral leve",
+"elevacao lateral com halteres leves"
+],
+"description": "Braços ao lado do corpo e cotovelos levemente dobrados. Eleve os halteres até a altura dos ombros e desça devagar."
+},
+{
+"name": "Elevação lateral na polia",
+"group": "Ombros",
+"equipment": "Polia",
+"video": "3vbYw9xklBc",
+"aliases": [],
+"description": "De lado para a polia, eleve o braço lateralmente até o ombro e volte com controle."
+},
+{
+"name": "Elevação frontal",
+"group": "Ombros",
+"equipment": "Halteres",
+"video": "jhxLYSm_P-k",
+"aliases": [],
+"description": "Eleve os halteres à frente até a altura dos ombros, sem balançar o corpo, e desça."
+},
+{
+"name": "Crucifixo inverso",
+"group": "Ombros",
+"equipment": "Halteres ou máquina",
+"video": "5HDkxzxe400",
+"aliases": [],
+"description": "Tronco inclinado à frente, abra os braços para os lados aproximando as escápulas."
+},
+{
+"name": "Encolhimento de ombros",
+"group": "Ombros",
+"equipment": "Halteres",
+"video": "RhGjwIUe16E",
+"aliases": [],
+"description": "Halteres ao lado do corpo. Suba os ombros em direção às orelhas, segure um instante e desça."
+},
+{
+"name": "Rotação externa de ombros",
+"group": "Ombros",
+"equipment": "Elástico ou polia",
+"video": "qczjEeYrono",
+"aliases": [],
+"description": "Cotovelo junto ao corpo a 90°. Gire o antebraço para fora contra o elástico e volte."
+},
+{
+"name": "Prancha frontal",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "qNRqGqESAWU",
+"aliases": [
+"prancha",
+"prancha curta"
+],
+"description": "Antebraços no chão, corpo alinhado da cabeça aos pés e abdômen contraído. Mantenha a posição sem deixar o quadril cair."
+},
+{
+"name": "Prancha com joelhos apoiados",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "aXyutgilS1Y",
+"aliases": [],
+"description": "Antebraços e joelhos no chão, corpo alinhado dos ombros aos joelhos. Contraia o abdômen e mantenha."
+},
+{
+"name": "Prancha lateral",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "zt7PjySXWCw",
+"aliases": [],
+"description": "De lado, apoiado no antebraço, eleve o quadril alinhando o corpo. Mantenha e troque de lado."
+},
+{
+"name": "Abdominal curto",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "KiKZsrjYuU4",
+"aliases": [
+"abdominal"
+],
+"description": "Deitado com os joelhos dobrados, eleve só os ombros do chão contraindo o abdômen e desça devagar."
+},
+{
+"name": "Abdominal bicicleta",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "1oODyinU1E8",
+"aliases": [],
+"description": "Deitado, leve o cotovelo em direção ao joelho oposto alternando os lados, como se pedalasse."
+},
+{
+"name": "Abdominal reverso",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "lncZxHLN88M",
+"aliases": [],
+"description": "Deitado com as pernas dobradas no ar, traga os joelhos em direção ao peito tirando o quadril do chão."
+},
+{
+"name": "Abdominal na polia",
+"group": "Core",
+"equipment": "Polia",
+"video": "I64bjVbs7XI",
+"aliases": [],
+"description": "Ajoelhado de frente para a polia, segure a corda junto à cabeça e flexione o tronco para baixo."
+},
+{
+"name": "Elevação de pernas",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "UL2xb7V9ELU",
+"aliases": [],
+"description": "Deitado, lombar apoiada no chão, eleve as pernas estendidas até 90° e desça devagar sem encostar."
+},
+{
+"name": "Dead bug",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "0loS0bRNqfs",
+"aliases": [],
+"description": "Deitado de costas, braços e pernas para cima. Estenda o braço e a perna opostos sem tirar a lombar do chão e alterne."
+},
+{
+"name": "Bird dog",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "QABW99qPiNM",
+"aliases": [
+"perdigueiro"
+],
+"description": "Em quatro apoios, estenda o braço e a perna opostos mantendo o tronco estável. Volte e alterne."
+},
+{
+"name": "Mountain climber",
+"group": "Core",
+"equipment": "Peso corporal",
+"video": "8wuUiihTbdw",
+"aliases": [
+"escalador"
+],
+"description": "Em posição de prancha alta, traga os joelhos em direção ao peito alternando rapidamente."
+},
+{
+"name": "Pallof press",
+"group": "Core",
+"equipment": "Polia ou elástico",
+"video": "Wez6pSiwfJg",
+"aliases": [],
+"description": "De lado para a polia, segure a pegada junto ao peito e empurre à frente resistindo à rotação do tronco."
+},
+{
+"name": "Caminhada na esteira",
+"group": "Cardio",
+"equipment": "Esteira",
+"video": "qPoethgMkrc",
+"aliases": [],
+"description": "Mantenha a postura ereta, passos naturais e braços soltos. Ajuste velocidade e inclinação ao seu condicionamento."
+},
+{
+"name": "Corrida na esteira",
+"group": "Cardio",
+"equipment": "Esteira",
+"video": "9OCjXQNRXg4",
+"aliases": [],
+"description": "Comece com aquecimento caminhando. Corra com passadas curtas, tronco ereto e respiração controlada."
+},
+{
+"name": "Bicicleta ergométrica",
+"group": "Cardio",
+"equipment": "Bicicleta",
+"video": "jddZ3TDhHwQ",
+"aliases": [],
+"description": "Ajuste o banco para o joelho ficar levemente dobrado com o pedal embaixo. Pedale em ritmo constante."
+},
+{
+"name": "Elíptico",
+"group": "Cardio",
+"equipment": "Elíptico",
+"video": "Rltlu55sBLE",
+"aliases": [],
+"description": "Postura ereta, pés inteiros nos pedais. Movimente braços e pernas de forma coordenada."
+},
+{
+"name": "Remo ergométrico",
+"group": "Cardio",
+"equipment": "Remo",
+"video": "acvBTy4sRKM",
+"aliases": [],
+"description": "Empurre com as pernas primeiro, depois incline levemente o tronco e puxe a pegada até o abdômen. Volte na ordem inversa."
+},
+{
+"name": "Polichinelo",
+"group": "Cardio",
+"equipment": "Peso corporal",
+"video": "S2uqQ9zHZMc",
+"aliases": [],
+"description": "Salte abrindo pernas e braços ao mesmo tempo e volte à posição inicial. Faça sem saltar, se preferir."
+},
+{
+"name": "Marcha estacionária",
+"group": "Cardio",
+"equipment": "Peso corporal",
+"video": "qHO4yxAdoYY",
+"aliases": [
+"caminhada no lugar"
+],
+"description": "Marche no lugar elevando os joelhos e movimentando os braços. Aumente o ritmo aos poucos."
+},
+{
+"name": "Subida no step",
+"group": "Cardio",
+"equipment": "Step",
+"video": "UU4IdhzZA5w",
+"aliases": [],
+"description": "Suba no step com um pé e depois o outro, desça na mesma ordem. Alterne a perna que inicia."
+},
+{
+"name": "Pular corda",
+"group": "Cardio",
+"equipment": "Corda",
+"video": "bB2BMeZTygg",
+"aliases": [],
+"description": "Saltos baixos na ponta dos pés, girando a corda com os punhos e cotovelos perto do corpo."
+},
+{
+"name": "Corda naval",
+"group": "Cardio",
+"equipment": "Corda naval",
+"video": "uhXgNAbw_U8",
+"aliases": [],
+"description": "Semi-agachado, faça ondas alternando os braços rapidamente com o abdômen firme."
+}
+];
+</script><script>
 const themes=[['Comece com planejamento','Defina hábitos realistas e organize sua semana.','Planeje duas refeições equilibradas.'],['Hidratação consciente','Mantenha água acessível durante o dia.','Registre sua ingestão de água.'],['Proteínas variadas','Inclua ovos, feijões, peixe ou outras fontes de proteína.','Varie uma fonte de proteína hoje.'],['Fibras no dia a dia','Frutas, legumes e grãos integrais ajudam na saciedade.','Acrescente um alimento rico em fibras.'],['Movimento possível','Caminhar e se movimentar fazem parte de uma rotina ativa.','Faça uma atividade adequada ao seu ritmo.'],['Sono e descanso','O descanso é importante para a saúde e a recuperação.','Organize um horário para dormir.'],['Refeições com atenção','Comer sem pressa ajuda a reconhecer sinais de fome e saciedade.','Faça uma refeição com menos distrações.'],['Prato colorido','Diferentes vegetais ajudam a diversificar os nutrientes.','Inclua vegetais de duas cores.'],['Reduza bebidas açucaradas','Substituições graduais podem melhorar a qualidade da alimentação.','Escolha água em uma refeição.'],['Lanches práticos','Frutas, iogurte e castanhas podem ser opções convenientes.','Prepare um lanche simples.'],['Alimentos in natura','Priorize alimentos frescos e minimamente processados.','Inclua uma fruta no dia.'],['Planeje suas compras','Uma lista facilita refeições caseiras e reduz desperdícios.','Revise o que já tem em casa.'],['Cozinhe em casa','Preparar refeições ajuda a conhecer os ingredientes utilizados.','Experimente uma receita simples.'],['Constância sem culpa','Um dia diferente não define seu progresso.','Retome um hábito positivo.'],['Metade do caminho','Reflita sobre o que funcionou até agora.','Anote uma conquista não relacionada ao peso.'],['Carboidratos equilibrados','Arroz, batata e mandioca podem fazer parte de refeições saudáveis.','Combine carboidrato, proteína e vegetais.'],['Leguminosas nutritivas','Feijão, lentilha e grão-de-bico são alimentos nutritivos.','Inclua uma leguminosa no prato.'],['Atividade prazerosa','Escolha movimentos de que você goste e que sejam seguros.','Experimente uma atividade agradável.'],['Rotina flexível','Uma alimentação saudável pode se adaptar ao seu dia.','Planeje uma alternativa prática para amanhã.'],['Leia os rótulos','Observe ingredientes e informações nutricionais.','Compare os rótulos de dois produtos.'],['Cuide do bem-estar','Saúde envolve aspectos físicos, mentais e sociais.','Reserve um tempo para relaxar.'],['Coma com variedade','Diversificar o cardápio evita monotonia alimentar.','Experimente um vegetal diferente.'],['Refeições acessíveis','Comida saudável pode incluir arroz, feijão, ovos e verduras.','Monte uma refeição simples e nutritiva.'],['Faça pausas','Pequenas pausas ao longo do dia ajudam a cuidar da rotina.','Levante-se e movimente-se quando possível.'],['Valorize o progresso','Disposição e hábitos são conquistas importantes.','Registre uma melhoria percebida.'],['Prepare antecipadamente','Organização ajuda nos dias corridos.','Deixe um ingrediente preparado.'],['Evite soluções milagrosas','Dietas extremas e produtos milagrosos não são necessários.','Escolha uma atitude sustentável.'],['Respeite seu corpo','As necessidades alimentares variam entre pessoas.','Observe sua fome e saciedade.'],['Compartilhe hábitos bons','Apoio social pode tornar mudanças mais agradáveis.','Convide alguém para uma atividade saudável.'],['Continue sua jornada','O fim do desafio é o começo de hábitos duradouros.','Escolha três hábitos para manter.']];
 const mealPlans=[ [['Ovos mexidos, pão integral e mamão','Arroz, feijão, frango e salada','Iogurte natural e banana','Sopa de legumes com lentilha'],['Aveia com leite ou bebida vegetal e fruta','Peixe, batata e legumes','Maçã e castanhas','Omelete com salada e arroz'],['Pão integral, queijo branco e fruta','Arroz, feijão, abóbora e ovo','Iogurte e aveia','Frango com legumes e mandioca'],['Iogurte, aveia e morangos','Macarrão integral com vegetais e grão-de-bico','Banana com pasta de amendoim','Arroz, feijão e salada com ovos'],['Omelete com tomate e fruta','Arroz, lentilha e frango com brócolis','Fruta e iogurte','Sopa de abóbora com feijão'],['Pão integral com ovo e fruta','Peixe, arroz e legumes','Castanhas e fruta','Salada de grão-de-bico com batata'],['Aveia, banana e iogurte','Arroz, feijão, carne magra ou tofu e salada','Fruta da estação','Omelete com legumes e mandioca']]][0];
 const shoppingItems=['Arroz','Feijão','Aveia','Pão integral','Ovos','Frango, peixe ou tofu','Lentilha ou grão-de-bico','Iogurte natural','Leite ou bebida vegetal','Banana','Mamão','Maçã','Frutas da estação','Alface e outras folhas','Tomate','Cenoura','Brócolis','Abóbora','Batata ou mandioca','Castanhas'];

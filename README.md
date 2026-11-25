@@ -4,6 +4,7 @@ Web app do desafio de 30 dias com cadastro, sincronização de progresso e assin
 
 ## O que mudou na versão 4.5
 
+- **Vídeos sempre no site:** a lista de exercícios e vídeos agora fica dentro do próprio `index.html`. Antes ela ficava em `public/exercises.js`; se esse arquivo não fosse publicado, os vídeos dos planos caíam na busca do YouTube.
 - **Plano com IA (Premium):** nova sub-aba "🤖 Plano com IA" na Academia (também acessível pelo botão "Montar com IA" nos Planos e em Refeições). O assinante responde objetivo, nível, dias, equipamentos, alimentos preferidos, restrições e limitações, e a IA monta um treino semanal e/ou um cardápio de 3 dias.
 - Os exercícios gerados usam os nomes da biblioteca, então aparecem com "▶ Vídeo" e com o ✓ de concluído. O plano fica salvo e sincronizado com a conta.
 - Só assinantes Premium ativos podem gerar. Cada assinante tem um limite diário (padrão 3). Se a IA falhar, a tentativa não é descontada.
@@ -30,14 +31,14 @@ Sem chave configurada, o site funciona normalmente e a sub-aba mostra "Em breve"
 
 ## O que mudou na versão 4.3
 
-- **Vídeos em todos os exercícios:** a biblioteca da Academia tem 91 exercícios, e cada um tem um vídeo demonstrativo do YouTube incorporado (`public/exercises.js`). O vídeo só carrega quando a pessoa toca em “Assistir”.
+- **Vídeos em todos os exercícios:** a biblioteca da Academia tem 91 exercícios, e cada um tem um vídeo demonstrativo do YouTube incorporado (lista no próprio `index.html`, no bloco `exerciseLibrary`). O vídeo só carrega quando a pessoa toca em “Assistir”.
 - **Vídeo direto dos planos:** nos planos prontos e na rotina gerada, tocar no exercício abre o vídeo correspondente.
 - **Cronômetro de descanso:** botões de 30, 60 e 90 segundos, com aviso sonoro e vibração no celular.
 - **Busca melhorada:** a busca ignora acentos e também encontra nomes alternativos (ex.: “triceps”, “hip thrust”, “voador”).
 - A biblioteca não depende mais da API externa wger.
 
 ### Como trocar ou adicionar um vídeo
-Abra `public/exercises.js` e altere o campo `video` do exercício. Use o código que aparece depois de `watch?v=` no link do YouTube. Exemplo: em `https://www.youtube.com/watch?v=zgk71dUUt0Y`, o código é `zgk71dUUt0Y`.
+Abra o `index.html`, procure o bloco `<script id="exerciseLibrary">` e altere o campo `video` do exercício. Use o código que aparece depois de `watch?v=` no link do YouTube. Exemplo: em `https://www.youtube.com/watch?v=zgk71dUUt0Y`, o código é `zgk71dUUt0Y`.
 
 ## O que mudou na versão 4.0
 

@@ -30,7 +30,9 @@ function aiConfig() {
 let exerciseNames = [];
 try {
   const sandbox = { window: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'public', 'exercises.js'), 'utf8'), sandbox, { timeout: 1000 });
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const block = html.match(/<script id="exerciseLibrary">([\s\S]*?)<\/script>/);
+  vm.runInNewContext(block ? block[1] : '', sandbox, { timeout: 1000 });
   exerciseNames = (sandbox.window.EXERCISE_LIBRARY || []).map(x => x.name).filter(Boolean);
 } catch (error) {
   console.warn('Biblioteca de exercícios indisponível para a IA:', error.message);
