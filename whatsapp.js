@@ -182,8 +182,9 @@ async function registrarRecebidas(pool, config, body) {
       const { id, telefone, texto } = mensagem;
       const sair = COMANDOS_SAIDA.test(texto);
       const recebido = await client.query(`
-        INSERT INTO public.whatsapp_messages (message_key, kind, phone, body, user_id)
-        SELECT $1, 'entrada', $2, $3, CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM public.users WHERE phone = $2
+        INSERT INTO public.whatsapp_messages (message_key, kind, phone, body, user_id, created_at)
+        SELECT $1, 'entrada', $2, $3, CASE WHEN COUNT(*) = 1 THEN MIN(id) END, clock_timestamp()
+        FROM public.users WHERE phone = $2
         ON CONFLICT DO NOTHING
       `, [`entrada:${id}`, telefone, sair ? null : texto]);
       if (!recebido.rowCount) continue;
@@ -206,13 +207,13 @@ async function registrarRecebidas(pool, config, body) {
 
 async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl) {
   const chave = `resposta:${telefone}:${Math.floor(Date.now() / 60000)}`;
+  const entrada = `entrada:${id}`;
   const reserva = await pool.query(`
     INSERT INTO public.whatsapp_messages (message_key, kind, phone, user_id)
     SELECT $1, 'resposta', $2, user_id FROM public.whatsapp_messages WHERE message_key = $3 AND body IS NOT NULL
-    ON CONFLICT DO NOTHING RETURNING user_id
-  `, [chave, telefone, `entrada:${id}`]);
+    ON CONFLICT DO NOTHING
+  `, [chave, telefone, entrada]);
   if (!reserva.rowCount) return;
-  const { user_id: userId } = reserva.rows[0];
 
   const suporte = `${baseUrl}/privacidade`;
   let resposta = `Olá! Este é o atendimento do Projeto Seca Saudável. Para falar com o suporte, consulte o contato em ${suporte}.`;
@@ -220,11 +221,14 @@ async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl
   if (cfg) {
     try {
       const historico = await pool.query(`
-        SELECT kind, body FROM public.whatsapp_messages
-        WHERE phone = $1 AND message_key <> $2 AND user_id IS NOT DISTINCT FROM $3
-          AND body IS NOT NULL AND created_at >= NOW() - INTERVAL '7 days'
-        ORDER BY created_at DESC LIMIT 6
-      `, [telefone, `entrada:${id}`, userId]);
+        SELECT anterior.kind, anterior.body FROM public.whatsapp_messages atual
+        JOIN public.whatsapp_messages anterior ON anterior.phone = atual.phone
+          AND anterior.user_id IS NOT DISTINCT FROM atual.user_id
+        WHERE atual.message_key = $1
+          AND (anterior.created_at, anterior.message_key) < (atual.created_at, atual.message_key)
+          AND anterior.body IS NOT NULL AND anterior.created_at >= NOW() - INTERVAL '7 days'
+        ORDER BY anterior.created_at DESC, anterior.message_key DESC LIMIT 6
+      `, [entrada]);
       const resultado = await fetch(`${cfg.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
