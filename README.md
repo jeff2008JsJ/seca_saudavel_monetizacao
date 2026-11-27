@@ -4,7 +4,7 @@ Web app do desafio de 30 dias com cadastro, sincronização de progresso e assin
 
 ## Atualização visual e páginas legais
 
-- A abertura usa fotos locais em WebP, com disposição adaptada para celular e desktop. Créditos, licença e instruções de troca estão em `FOTOS.md`.
+- A apresentação para visitantes e o topo do painel de quem está conectado usam fotos locais em WebP, com disposição adaptada para celular e desktop. O painel mantém o progresso e os controles, sem repetir a apresentação comercial. Créditos, licença e instruções de troca estão em `FOTOS.md`.
 - Termos e privacidade estão preenchidos com os dados fornecidos pelo responsável e a data de 26/11/2026.
 - A pasta `public/` acompanha o projeto e deve ser publicada inteira: o servidor não expõe os arquivos estáticos da raiz.
 - O backend continua na versão 4.5.0. Resumo das diferenças em relação à publicação e das pendências verificadas em `ATUALIZACAO.md`.
