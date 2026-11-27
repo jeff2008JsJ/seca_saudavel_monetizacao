@@ -42,6 +42,7 @@ public class MainActivity extends Activity {
     private View fullscreenView;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private LinkPolicy linkPolicy;
+    private FileSaver fileSaver;
     private Object backCallback;
     private boolean backCallbackRegistered;
 
@@ -175,6 +176,9 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
+                if (url != null && url.startsWith(BuildConfig.SITE_URL)) {
+                    view.evaluateJavascript(FileSaver.PAGE_SHIM, null);
+                }
                 CookieManager.getInstance().flush();
             }
 
@@ -188,6 +192,14 @@ public class MainActivity extends Activity {
             @Override
             public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
                 updateBackCallback();
+            }
+        });
+
+        fileSaver = new FileSaver(this, webView, linkPolicy);
+        webView.addJavascriptInterface(fileSaver, FileSaver.BRIDGE_NAME);
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, length) -> {
+            if (url.startsWith("https://")) {
+                openExternally(url);
             }
         });
 
@@ -332,6 +344,15 @@ public class MainActivity extends Activity {
         webView.onPause();
         CookieManager.getInstance().flush();
         super.onPause();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == FileSaver.REQUEST_CODE) {
+            fileSaver.onActivityResult(resultCode, data);
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
