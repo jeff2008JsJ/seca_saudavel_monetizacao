@@ -4,13 +4,19 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.SecureRandom;
 
 /**
  * Saves files the site generates in the page (blob: downloads such as "Exportar meus dados"),
@@ -21,8 +27,12 @@ final class FileSaver {
     static final String BRIDGE_NAME = "SecaSaudavelAndroid";
     static final int REQUEST_CODE = 4101;
 
-    /** Captures blobs passed to URL.createObjectURL and reroutes <a download> clicks on them. */
-    static final String PAGE_SHIM = "(function(){if(window.__secaFileSaver||!window." + BRIDGE_NAME + ")return;"
+    /**
+     * Captures blobs passed to URL.createObjectURL and reroutes <a download> clicks on them.
+     * The token is only handed to the top frame, so embedded iframes (YouTube) can't use the bridge.
+     */
+    String pageShim() {
+        return "(function(){if(window.__secaFileSaver||!window." + BRIDGE_NAME + ")return;"
             + "window.__secaFileSaver=1;var blobs={};"
             + "var create=URL.createObjectURL;URL.createObjectURL=function(o){var u=create.apply(URL,arguments);"
             + "if(o instanceof Blob)blobs[u]=o;return u};"
@@ -31,22 +41,38 @@ final class FileSaver {
             + "var click=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){"
             + "var b=this.download&&blobs[this.href];if(!b)return click.apply(this,arguments);"
             + "var name=this.download,r=new FileReader();"
-            + "r.onload=function(){" + BRIDGE_NAME + ".saveFile(name,b.type||'application/octet-stream',r.result)};"
+            + "r.onload=function(){" + BRIDGE_NAME + ".saveFile('" + token + "',name,b.type||'application/octet-stream',r.result)};"
             + "r.readAsDataURL(b)}})();";
+    }
 
     private final Activity activity;
     private final WebView webView;
     private final LinkPolicy linkPolicy;
-    private byte[] pendingBytes;
+    private final String token;
 
     FileSaver(Activity activity, WebView webView, LinkPolicy linkPolicy) {
         this.activity = activity;
         this.webView = webView;
         this.linkPolicy = linkPolicy;
+        byte[] random = new byte[16];
+        new SecureRandom().nextBytes(random);
+        StringBuilder hex = new StringBuilder();
+        for (byte b : random) {
+            hex.append(String.format("%02x", b));
+        }
+        this.token = hex.toString();
+    }
+
+    /** Kept on disk so the export survives the activity being recreated while the picker is open. */
+    private File pendingFile() {
+        return new File(activity.getCacheDir(), "pending-export");
     }
 
     @JavascriptInterface
-    public void saveFile(String fileName, String mimeType, String dataUrl) {
+    public void saveFile(String callerToken, String fileName, String mimeType, String dataUrl) {
+        if (!token.equals(callerToken)) {
+            return;
+        }
         int comma = dataUrl == null ? -1 : dataUrl.indexOf(',');
         if (comma < 0) {
             return;
@@ -63,7 +89,12 @@ final class FileSaver {
                     || linkPolicy.targetFor(pageUrl) != LinkPolicy.Target.IN_APP) {
                 return;
             }
-            pendingBytes = bytes;
+            try (OutputStream out = new FileOutputStream(pendingFile())) {
+                out.write(bytes);
+            } catch (IOException e) {
+                Toast.makeText(activity, R.string.save_failed, Toast.LENGTH_LONG).show();
+                return;
+            }
             Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
                     .addCategory(Intent.CATEGORY_OPENABLE)
                     .setType(mimeType)
@@ -71,18 +102,28 @@ final class FileSaver {
             try {
                 activity.startActivityForResult(intent, REQUEST_CODE);
             } catch (ActivityNotFoundException e) {
-                pendingBytes = null;
+                pendingFile().delete();
                 Toast.makeText(activity, R.string.save_failed, Toast.LENGTH_LONG).show();
             }
         });
     }
 
     void onActivityResult(int resultCode, Intent data) {
-        byte[] bytes = pendingBytes;
-        pendingBytes = null;
+        File pending = pendingFile();
         Uri uri = data == null ? null : data.getData();
-        if (resultCode != Activity.RESULT_OK || bytes == null || uri == null) {
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            pending.delete();
             return;
+        }
+        byte[] bytes;
+        try {
+            bytes = readAll(pending);
+        } catch (IOException e) {
+            deleteQuietly(uri);
+            Toast.makeText(activity, R.string.save_failed, Toast.LENGTH_LONG).show();
+            return;
+        } finally {
+            pending.delete();
         }
         try (OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
             if (out == null) {
@@ -92,6 +133,26 @@ final class FileSaver {
             Toast.makeText(activity, R.string.file_saved, Toast.LENGTH_SHORT).show();
         } catch (IOException | SecurityException e) {
             Toast.makeText(activity, R.string.save_failed, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private static byte[] readAll(File file) throws IOException {
+        try (FileInputStream in = new FileInputStream(file)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            return out.toByteArray();
+        }
+    }
+
+    private void deleteQuietly(Uri uri) {
+        try {
+            DocumentsContract.deleteDocument(activity.getContentResolver(), uri);
+        } catch (Exception ignored) {
+            // The picker may hand back a URI that isn't a deletable document.
         }
     }
 }

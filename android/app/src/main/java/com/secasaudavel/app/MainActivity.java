@@ -177,7 +177,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
                 if (url != null && url.startsWith(BuildConfig.SITE_URL)) {
-                    view.evaluateJavascript(FileSaver.PAGE_SHIM, null);
+                    view.evaluateJavascript(fileSaver.pageShim(), null);
                 }
                 CookieManager.getInstance().flush();
             }
