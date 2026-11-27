@@ -1026,8 +1026,8 @@ async function rotinaWhatsApp() {
   if (rotinaWhatsAppEmAndamento) return;
   rotinaWhatsAppEmAndamento = true;
   try {
-    await whatsapp.lembrarRenovacoes(pool, whatsappConfig);
-    await whatsapp.limparConversas(pool);
+    await whatsapp.limparConversas(pool).catch(erro => whatsapp.registrarErro('limpeza do histórico', erro));
+    if (whatsappConfig?.renovacao) await whatsapp.lembrarRenovacoes(pool, whatsappConfig);
   } catch (erro) {
     whatsapp.registrarErro('rotina de manutenção', erro);
   } finally {
@@ -1139,10 +1139,8 @@ async function iniciar() {
     console.log('Webhook Mercado Pago configurado em:', MP_WEBHOOK_URL);
     sincronizarAssinaturasPendentes();
     setInterval(sincronizarAssinaturasPendentes, 5 * 60 * 1000);
-    if (whatsappConfig) {
-      rotinaWhatsApp();
-      setInterval(rotinaWhatsApp, 60 * 60 * 1000);
-    }
+    rotinaWhatsApp();
+    setInterval(rotinaWhatsApp, 60 * 60 * 1000);
   });
 
   const shutdown = async () => {
