@@ -106,6 +106,8 @@ async function migrar(pool) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE public.whatsapp_messages ENABLE ROW LEVEL SECURITY;
+    CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_user ON public.whatsapp_messages(user_id)
+      WHERE user_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_phone ON public.whatsapp_messages(phone, created_at DESC)
       WHERE phone IS NOT NULL;
   `);
@@ -173,8 +175,9 @@ async function respostaAutomatica(pool, config, { telefone, texto, id, timestamp
   if (sair) {
     await pool.query(`
       WITH recebido AS (
-        INSERT INTO public.whatsapp_messages (message_key, kind, phone)
-        VALUES ($1, 'entrada', $2) ON CONFLICT DO NOTHING RETURNING phone
+        INSERT INTO public.whatsapp_messages (message_key, kind, phone, user_id)
+        SELECT $1, 'entrada', $2, CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM public.users WHERE phone = $2
+        ON CONFLICT DO NOTHING RETURNING phone
       ), saida AS (
         UPDATE public.users SET whatsapp_opt_in_at = NULL
         WHERE phone IN (SELECT phone FROM recebido) AND whatsapp_opt_in_at IS NOT NULL
@@ -186,16 +189,19 @@ async function respostaAutomatica(pool, config, { telefone, texto, id, timestamp
   }
 
   const recebido = await pool.query(`
-    INSERT INTO public.whatsapp_messages (message_key, kind, phone, body)
-    VALUES ($1, 'entrada', $2, $3) ON CONFLICT DO NOTHING
+    INSERT INTO public.whatsapp_messages (message_key, kind, phone, body, user_id)
+    SELECT $1, 'entrada', $2, $3, CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM public.users WHERE phone = $2
+    ON CONFLICT DO NOTHING RETURNING user_id
   `, [`entrada:${id}`, telefone, texto]);
   if (!recebido.rowCount) return;
 
+  const { user_id: userId } = recebido.rows[0];
   const chave = `resposta:${telefone}:${Math.floor(agora / 60000)}`;
   const reserva = await pool.query(`
-    INSERT INTO public.whatsapp_messages (message_key, kind, phone)
-    VALUES ($1, 'resposta', $2) ON CONFLICT DO NOTHING
-  `, [chave, telefone]);
+    INSERT INTO public.whatsapp_messages (message_key, kind, phone, user_id)
+    SELECT $1, 'resposta', $2, user_id FROM public.whatsapp_messages WHERE message_key = $3
+    ON CONFLICT DO NOTHING
+  `, [chave, telefone, `entrada:${id}`]);
   if (!reserva.rowCount) return;
 
   const suporte = `${baseUrl}/privacidade`;
@@ -205,9 +211,10 @@ async function respostaAutomatica(pool, config, { telefone, texto, id, timestamp
     try {
       const historico = await pool.query(`
         SELECT kind, body FROM public.whatsapp_messages
-        WHERE phone = $1 AND message_key <> $2 AND body IS NOT NULL AND created_at >= NOW() - INTERVAL '7 days'
+        WHERE phone = $1 AND message_key <> $2 AND user_id IS NOT DISTINCT FROM $3
+          AND body IS NOT NULL AND created_at >= NOW() - INTERVAL '7 days'
         ORDER BY created_at DESC LIMIT 6
-      `, [telefone, `entrada:${id}`]);
+      `, [telefone, `entrada:${id}`, userId]);
       const resultado = await fetch(`${cfg.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },

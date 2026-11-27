@@ -713,7 +713,7 @@ app.post('/api/account/delete', requireAuth, authLimiter, async (req, res) => {
       await client.query('DELETE FROM public.ai_usage WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.password_reset_tokens WHERE user_id = $1', [userId]);
       await client.query(`DELETE FROM public.user_sessions WHERE sess->>'userId' = $1`, [String(userId)]);
-      await client.query(`DELETE FROM public.whatsapp_messages WHERE phone = (SELECT phone FROM public.users WHERE id = $1)`, [userId]);
+      await client.query('DELETE FROM public.whatsapp_messages WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.users WHERE id = $1', [userId]);
       await client.query('COMMIT');
     } catch (dbError) {
