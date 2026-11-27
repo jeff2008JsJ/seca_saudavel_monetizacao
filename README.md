@@ -2,6 +2,14 @@
 
 Web app do desafio de 30 dias com cadastro, sincronização de progresso e assinatura Premium de R$ 19,90/mês via Mercado Pago.
 
+## Atualização visual e páginas legais
+
+- A abertura usa fotos locais em WebP, com disposição adaptada para celular e desktop. Créditos, licença e instruções de troca estão em `FOTOS.md`.
+- Termos e privacidade estão preenchidos com os dados fornecidos pelo responsável e a data de 26/11/2026.
+- A pasta `public/` acompanha o projeto e deve ser publicada inteira: o servidor não expõe os arquivos estáticos da raiz.
+- O backend continua na versão 4.5.0. Resumo das diferenças em relação à publicação e das pendências verificadas em `ATUALIZACAO.md`.
+- O ZIP não inclui `.env`, banco de dados, `node_modules` nem histórico Git; mantenha as variáveis já configuradas no Render.
+
 ## O que mudou na versão 4.5
 
 - **Vídeos sempre no site:** a lista de exercícios e vídeos agora fica dentro do próprio `index.html`. Antes ela ficava em `public/exercises.js`; se esse arquivo não fosse publicado, os vídeos dos planos caíam na busca do YouTube.
@@ -78,7 +86,7 @@ Abra o `index.html`, procure o bloco `<script id="exerciseLibrary">` e altere o 
 
 ## Antes de vender
 
-- Edite `public/termos.html` e `public/privacidade.html` e troque os campos entre colchetes (nome, CPF/CNPJ, e-mail e data). Se possível, peça revisão a um profissional jurídico.
+- Confira os dados já preenchidos em `public/termos.html` e `public/privacidade.html` antes da publicação.
 - Para mudar receitas, cardápios ou treinos do Premium, edite `premium-content.js`.
 - Teste cadastro, assinatura, retorno, webhook e cancelamento com credenciais de teste do Mercado Pago antes de usar as de produção.
 
