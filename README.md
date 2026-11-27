@@ -61,7 +61,7 @@ Abra o `index.html`, procure o bloco `<script id="exerciseLibrary">` e altere o 
 
 ## Requisitos
 
-- Node.js 20 ou superior.
+- Node.js 22.x.
 - Banco PostgreSQL (Supabase).
 - Conta Mercado Pago com aplicação criada.
 - Hospedagem com HTTPS (ex.: Render).
@@ -98,15 +98,36 @@ Abra o `index.html`, procure o bloco `<script id="exerciseLibrary">` e altere o 
 
 O backend usa `POST /preapproval` para criar a assinatura, `GET /preapproval/{id}` para consultar o status e `PUT /preapproval/{id}` com `status: cancelled` para cancelar. O preço é definido no servidor.
 
+## WhatsApp Business (opcional)
+
+1. No [Meta for Developers](https://developers.facebook.com/apps/), crie um app com o produto **WhatsApp** e vincule um número à sua conta WhatsApp Business. Esta integração usa a **Cloud API oficial**, não automatiza conversas do WhatsApp pessoal.
+2. No servidor, configure `WHATSAPP_TOKEN` (token com permissão `whatsapp_business_messaging` para a conta), `WHATSAPP_PHONE_NUMBER_ID` (ID do número, não o telefone), `WHATSAPP_APP_SECRET` (segredo do app Meta) e `WHATSAPP_VERIFY_TOKEN` (um segredo aleatório criado por você para verificar o webhook). Deixe-os vazios para manter o recurso desativado.
+3. Na configuração do WhatsApp no app Meta, informe a URL de callback `https://SEU-DOMINIO/api/webhooks/whatsapp` e o mesmo token de verificação. Inscreva a conta WhatsApp Business no app e assine o campo **messages**. Teste primeiro com um número de teste da Meta.
+4. No [WhatsApp Manager](https://business.facebook.com/wa/manage/), crie e aguarde a aprovação dos modelos transacionais abaixo, sem cabeçalho, rodapé ou botões obrigatórios. Configure o nome exato de cada modelo aprovado no servidor; um nome em branco desativa apenas aquele envio.
+
+| Variável | Exemplo de corpo do modelo | Variáveis do corpo (em ordem) |
+| --- | --- | --- |
+| `WHATSAPP_WELCOME_TEMPLATE` | Bem-vindo(a) ao Projeto Seca Saudável! Sua conta foi criada com sucesso. Para deixar de receber avisos, responda PARAR. | Nenhuma |
+| `WHATSAPP_BILLING_TEMPLATE` | Confira a situação da sua assinatura Premium do Projeto Seca Saudável na aba Conta. Se precisar de ajuda, fale com o suporte. Para deixar de receber avisos, responda PARAR. | Nenhuma |
+| `WHATSAPP_RENEWAL_TEMPLATE` | Sua assinatura Premium do Projeto Seca Saudável tem renovação prevista para {{1}}. Para deixar de receber avisos, responda PARAR. | `{{1}}`: data da próxima cobrança, no formato `DD/MM/AAAA` |
+
+Os padrões são versão Graph `v23.0`, idioma `pt_BR` e aviso com até 3 dias de antecedência (de 1 a 30, em `WHATSAPP_RENEWAL_DAYS`). A data vem de `next_payment_date` do Mercado Pago e é interpretada no horário de São Paulo. O servidor verifica as renovações a cada hora e evita repetir o aviso na mesma data de cobrança. Avisos de cobrança são acionados quando a assinatura passa a pausada ou quando um evento de pagamento recorrente confirma uma recusa; para receber esse último evento, assine também `subscription_authorized_payment` no Mercado Pago.
+
+As mensagens proativas só são enviadas com autorização explícita. O cliente pode alterar a preferência em **Conta** ou responder **STOP**, **PARAR** ou **SAIR**. Os envios são assíncronos, não alteram a situação da cobrança e não são reenviados automaticamente se a API da Meta falhar; confira os logs do servidor no teste de ativação.
+
+Para habilitar respostas a mensagens recebidas, defina `WHATSAPP_AI_REPLIES=true` e configure o provedor de IA acima. O assistente usa um contexto curto das conversas recentes, não acessa contas e orienta a falar com o suporte para questões de cobrança. Sem provedor configurado ou em caso de falha da IA, envia uma resposta padrão com o caminho para o suporte. Revise a política de privacidade e teste todos os fluxos com o número de teste antes de liberar para clientes.
+
 ## Endpoints
 
 - `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/logout`
 - `POST /api/auth/forgot-password` · `POST /api/auth/reset-password`
 - `GET /api/me`
+- `PUT /api/account/whatsapp` (quando habilitado)
 - `GET|PUT /api/gym/data` · `GET|PUT /api/app-state`
 - `POST /api/subscription/checkout` · `POST /api/subscription/cancel`
 - `GET /api/premium/content` (somente assinantes)
 - `POST /api/webhooks/mercadopago`
+- `GET|POST /api/webhooks/whatsapp` (quando habilitado)
 - `GET /health`
 
-Requisições que alteram dados (`POST`/`PUT`) precisam vir do próprio site em JSON; chamadas de outros domínios recebem 403. O webhook do Mercado Pago é validado pela assinatura `x-signature`.
+Requisições que alteram dados (`POST`/`PUT`) precisam vir do próprio site em JSON; chamadas de outros domínios recebem 403. Os webhooks são exceções e validam as assinaturas `x-signature` (Mercado Pago) e `X-Hub-Signature-256` (WhatsApp).

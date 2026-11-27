@@ -6,6 +6,7 @@ const PgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const premiumContent = require('./premium-content');
 const ai = require('./ai');
+const whatsapp = require('./whatsapp');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -32,6 +33,7 @@ pool.on('error', err => console.error('Erro inesperado no pool PostgreSQL:', err
 
 const PORT = Number(process.env.PORT || 3000);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+const whatsappConfig = whatsapp.configuracao();
 const MP_WEBHOOK_URL = (process.env.MP_WEBHOOK_URL || `${BASE_URL}/api/webhooks/mercadopago`).replace(/\/$/, '');
 if (/localhost|127\.0\.0\.1/i.test(MP_WEBHOOK_URL)) {
   console.warn('ATENÇÃO: MP_WEBHOOK_URL aponta para localhost; o Mercado Pago não consegue acessar esse endereço. Configure a URL pública do ngrok no .env.');
@@ -111,12 +113,21 @@ app.use(helmet({
 
 // Página principal: o BASE_URL é inserido nas meta tags de compartilhamento.
 const fs = require('fs');
-const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('%BASE_URL%', BASE_URL);
+const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8')
+  .replaceAll('%BASE_URL%', BASE_URL)
+  .replace('id="registerWhatsApp" hidden', whatsappConfig ? 'id="registerWhatsApp"' : 'id="registerWhatsApp" hidden');
 app.get('/', (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(indexHtml));
 
 // Somente a pasta public/ é servida como arquivos estáticos (nunca a raiz do projeto).
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: isProd ? '1d' : 0, extensions: ['html'] }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  verify(req, _res, body) {
+    if (whatsappConfig && req.method === 'POST' && req.path === whatsapp.CAMINHO_WEBHOOK) {
+      req.whatsappRawBody = body;
+    }
+  }
+}));
 
 // Proteção CSRF: toda requisição que altera dados precisa vir do próprio site
 // (cabeçalho Origin/Referer) e em JSON. O webhook do Mercado Pago tem assinatura própria.
@@ -189,18 +200,25 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10) {
     return res.status(400).json({ error: 'Informe nome, e-mail válido e senha com pelo menos 10 caracteres.' });
   }
+  const preferencias = whatsappConfig ? whatsapp.preferencias(req.body) : { telefone: null, optIn: false };
+  if (!preferencias) return res.status(400).json({ error: 'Informe um número de WhatsApp brasileiro válido, com DDD.' });
 
   try {
     const hash = await bcrypt.hash(password, 12);
     const result = await pool.query(
-      `INSERT INTO public.users (name, email, password_hash, terms_accepted_at)
-       VALUES ($1, $2, $3, NOW())
+      `INSERT INTO public.users (name, email, password_hash, terms_accepted_at, phone, whatsapp_opt_in_at)
+       VALUES ($1, $2, $3, NOW(), $4, CASE WHEN $5::boolean THEN NOW() END)
        RETURNING id, name, email`,
-      [name, email, hash]
+      [name, email, hash, preferencias.telefone, preferencias.optIn]
     );
     const user = { ...result.rows[0], id: Number(result.rows[0].id) };
     await new Promise((resolve, reject) => req.session.regenerate(err => (err ? reject(err) : resolve())));
     req.session.userId = Number(user.id);
+    if (preferencias.optIn && whatsappConfig?.boasVindas) {
+      whatsapp.notificar(pool, whatsappConfig, {
+        chave: `boas-vindas:${user.id}`, tipo: 'boas-vindas', userId: user.id, template: whatsappConfig.boasVindas
+      }).catch(erro => whatsapp.registrarErro('boas-vindas', erro));
+    }
     return res.json({ user, premium: false });
   } catch (error) {
     if (error.code === '23505') {
@@ -490,10 +508,37 @@ app.get('/api/me', async (req, res) => {
       return res.json({ user: null, premium: false });
     }
     const sub = await activeSub(user.id);
-    return res.json({ user, premium: !!sub, subscriptionStatus: sub?.status || 'free' });
+    const preferencias = whatsappConfig ? await pool.query(
+      'SELECT phone, whatsapp_opt_in_at IS NOT NULL AS "optIn" FROM public.users WHERE id = $1',
+      [user.id]
+    ) : null;
+    return res.json({
+      user, premium: !!sub, subscriptionStatus: sub?.status || 'free',
+      ...(preferencias?.rows[0] && { whatsapp: preferencias.rows[0] })
+    });
   } catch (error) {
     console.error('Erro ao consultar usuário:', error);
     return res.status(500).json({ error: 'Não foi possível consultar sua conta.' });
+  }
+});
+
+app.put('/api/account/whatsapp', requireAuth, authLimiter, async (req, res) => {
+  if (!whatsappConfig) return res.status(404).json({ error: 'Os avisos pelo WhatsApp não estão disponíveis.' });
+  const preferencias = whatsapp.preferencias(req.body);
+  if (!preferencias) return res.status(400).json({ error: 'Informe um número de WhatsApp brasileiro válido, com DDD.' });
+
+  try {
+    await pool.query(`
+      UPDATE public.users
+      SET phone = $1, whatsapp_opt_in_at = CASE WHEN $2::boolean THEN
+        CASE WHEN phone = $1 THEN COALESCE(whatsapp_opt_in_at, NOW()) ELSE NOW() END
+      END
+      WHERE id = $3
+    `, [preferencias.telefone, preferencias.optIn, req.session.userId]);
+    return res.json({ ok: true, message: 'Preferências de WhatsApp salvas.' });
+  } catch (erro) {
+    whatsapp.registrarErro('preferências', erro);
+    return res.status(500).json({ error: 'Não foi possível salvar suas preferências de WhatsApp.' });
   }
 });
 
@@ -668,6 +713,7 @@ app.post('/api/account/delete', requireAuth, authLimiter, async (req, res) => {
       await client.query('DELETE FROM public.ai_usage WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.password_reset_tokens WHERE user_id = $1', [userId]);
       await client.query(`DELETE FROM public.user_sessions WHERE sess->>'userId' = $1`, [String(userId)]);
+      await client.query('DELETE FROM public.whatsapp_messages WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.users WHERE id = $1', [userId]);
       await client.query('COMMIT');
     } catch (dbError) {
@@ -737,10 +783,12 @@ async function buscarAssinatura(id) {
   return data;
 }
 
-async function atualizarAssinatura(subscription) {
+async function atualizarAssinatura(subscription, pagamentoRecusadoId) {
   const userId = Number(subscription.external_reference);
   const subscriptionId = String(subscription.id || '');
   const status = String(subscription.status || 'pending');
+  const data = typeof subscription.next_payment_date === 'string' ? Date.parse(subscription.next_payment_date) : NaN;
+  const proximaCobranca = Number.isFinite(data) ? new Date(data) : null;
 
   if (!Number.isInteger(userId) || userId <= 0 || !subscriptionId) {
     console.warn('Assinatura recebida sem identificação válida.');
@@ -748,6 +796,8 @@ async function atualizarAssinatura(subscription) {
   }
 
   const client = await pool.connect();
+  let alteradaEm;
+  let statusAnterior;
   try {
     await client.query('BEGIN');
 
@@ -759,7 +809,7 @@ async function atualizarAssinatura(subscription) {
     }
 
     const existing = await client.query(
-      'SELECT user_id FROM public.subscriptions WHERE mp_preapproval_id = $1',
+      `SELECT user_id, status FROM public.subscriptions WHERE mp_preapproval_id = $1${whatsappConfig?.cobranca ? ' FOR UPDATE' : ''}`,
       [subscriptionId]
     );
 
@@ -770,31 +820,69 @@ async function atualizarAssinatura(subscription) {
     }
 
     if (existing.rows[0]) {
-      await client.query(
+      statusAnterior = existing.rows[0].status;
+      const atualizada = await client.query(
         `UPDATE public.subscriptions
-         SET status = $1, init_point = COALESCE($2, init_point), updated_at = NOW()
-         WHERE mp_preapproval_id = $3 AND user_id = $4`,
-        [status, subscription.init_point || null, subscriptionId, userId]
+         SET status = $1, init_point = COALESCE($2, init_point), updated_at = NOW(), next_payment_date = $5
+         WHERE mp_preapproval_id = $3 AND user_id = $4
+         RETURNING updated_at::text`,
+        [status, subscription.init_point || null, subscriptionId, userId, proximaCobranca]
       );
+      alteradaEm = atualizada.rows[0]?.updated_at;
     } else {
       await client.query(
         `INSERT INTO public.subscriptions
-         (user_id, mp_preapproval_id, status, init_point, updated_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        [userId, subscriptionId, status, subscription.init_point || null]
+         (user_id, mp_preapproval_id, status, init_point, updated_at, next_payment_date)
+         VALUES ($1, $2, $3, $4, NOW(), $5)`,
+        [userId, subscriptionId, status, subscription.init_point || null, proximaCobranca]
       );
     }
 
     await client.query('COMMIT');
-    console.log('Assinatura sincronizada. Usuário:', userId, 'Status:', status);
-    return true;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
   }
+  console.log('Assinatura sincronizada. Usuário:', userId, 'Status:', status);
+  if (whatsappConfig?.cobranca && (status === 'authorized' || status === 'paused')) {
+    const chave = pagamentoRecusadoId ? `pagamento-recusado:${subscriptionId}:${pagamentoRecusadoId}` :
+      status === 'paused' && statusAnterior !== 'paused' && alteradaEm ? `assinatura-pausada:${subscriptionId}:${alteradaEm}` : null;
+    if (chave) {
+      whatsapp.notificar(pool, whatsappConfig, { chave, tipo: 'cobranca', userId, template: whatsappConfig.cobranca })
+        .catch(erro => whatsapp.registrarErro('cobrança', erro));
+    }
+  }
+  return true;
 }
+
+app.get(whatsapp.CAMINHO_WEBHOOK, (req, res) => {
+  if (!whatsappConfig) return res.sendStatus(404);
+  if (req.query['hub.mode'] !== 'subscribe' || req.query['hub.verify_token'] !== whatsappConfig.verifyToken ||
+      typeof req.query['hub.challenge'] !== 'string') return res.sendStatus(403);
+  return res.type('text').send(req.query['hub.challenge']);
+});
+
+app.post(whatsapp.CAMINHO_WEBHOOK, async (req, res) => {
+  if (!whatsappConfig) return res.sendStatus(404);
+  if (!whatsapp.assinaturaValida(req.whatsappRawBody, req.get('x-hub-signature-256'), whatsappConfig.appSecret)) {
+    return res.sendStatus(403);
+  }
+  try {
+    const mensagens = await whatsapp.registrarRecebidas(pool, whatsappConfig, req.body);
+    res.sendStatus(200);
+    if (mensagens.length) {
+      setImmediate(() => {
+        whatsapp.responderMensagens(pool, whatsappConfig, mensagens, BASE_URL)
+          .catch(erro => whatsapp.registrarErro('respostas', erro));
+      });
+    }
+  } catch (erro) {
+    whatsapp.registrarErro('webhook', erro);
+    return res.sendStatus(500);
+  }
+});
 
 app.post('/api/webhooks/mercadopago', async (req, res) => {
   if (!validWebhook(req)) {
@@ -845,6 +933,7 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
 
   try {
     let preapprovalId = null;
+    let pagamentoRecusadoId;
 
     if (type === 'subscription_preapproval') {
       preapprovalId = id;
@@ -866,6 +955,7 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
 
       const payment = await response.json();
       preapprovalId = payment.preapproval_id || payment.preapproval?.id || null;
+      if (payment.payment?.status === 'rejected') pagamentoRecusadoId = id;
       if (!preapprovalId) {
         console.warn('Pagamento recorrente sem referência de assinatura; solicitando nova tentativa:', id);
         return res.sendStatus(500);
@@ -881,7 +971,7 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
       return res.sendStatus(500);
     }
 
-    const updated = await atualizarAssinatura(subscription);
+    const updated = await atualizarAssinatura(subscription, pagamentoRecusadoId);
     if (!updated) console.warn('Assinatura consultada, mas não foi possível vinculá-la a um usuário local.');
     return res.sendStatus(200);
   } catch (error) {
@@ -901,6 +991,17 @@ async function sincronizarAssinaturasPendentes() {
       WHERE mp_preapproval_id IS NOT NULL AND mp_preapproval_id <> ''
       ORDER BY id DESC LIMIT 100
     `);
+    if (whatsappConfig?.renovacao) {
+      const adicionais = await pool.query(`
+        SELECT s.mp_preapproval_id FROM public.subscriptions s
+        JOIN public.users u ON u.id = s.user_id
+        WHERE s.status = 'authorized' AND s.mp_preapproval_id <> '' AND u.whatsapp_opt_in_at IS NOT NULL
+          AND s.mp_preapproval_id <> ALL ($1::text[])
+          AND (s.updated_at IS NULL OR s.updated_at < NOW() - INTERVAL '12 hours')
+        ORDER BY s.updated_at ASC NULLS FIRST LIMIT 10
+      `, [result.rows.map(row => row.mp_preapproval_id)]);
+      result.rows.push(...adicionais.rows);
+    }
     let atualizadas = 0;
 
     for (const row of result.rows) {
@@ -917,6 +1018,20 @@ async function sincronizarAssinaturasPendentes() {
     console.error('Erro na rotina de sincronização automática:', error.message);
   } finally {
     sincronizacaoEmAndamento = false;
+  }
+}
+
+let rotinaWhatsAppEmAndamento = false;
+async function rotinaWhatsApp() {
+  if (rotinaWhatsAppEmAndamento) return;
+  rotinaWhatsAppEmAndamento = true;
+  try {
+    await whatsapp.limparConversas(pool).catch(erro => whatsapp.registrarErro('limpeza do histórico', erro));
+    if (whatsappConfig?.renovacao) await whatsapp.lembrarRenovacoes(pool, whatsappConfig);
+  } catch (erro) {
+    whatsapp.registrarErro('rotina de manutenção', erro);
+  } finally {
+    rotinaWhatsAppEmAndamento = false;
   }
 }
 
@@ -1002,6 +1117,7 @@ async function iniciar() {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON public.password_reset_tokens(user_id)');
 
   await pool.query('ALTER TABLE public.users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ');
+  await whatsapp.migrar(pool);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS public.ai_usage (
@@ -1023,6 +1139,8 @@ async function iniciar() {
     console.log('Webhook Mercado Pago configurado em:', MP_WEBHOOK_URL);
     sincronizarAssinaturasPendentes();
     setInterval(sincronizarAssinaturasPendentes, 5 * 60 * 1000);
+    rotinaWhatsApp();
+    setInterval(rotinaWhatsApp, 60 * 60 * 1000);
   });
 
   const shutdown = async () => {
