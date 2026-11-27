@@ -599,6 +599,15 @@ async function cancelarPreapprovalMP(preapprovalId) {
   return response.ok;
 }
 
+async function statusPreapprovalMP(preapprovalId) {
+  const response = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(preapprovalId)}`, {
+    headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
+  });
+  if (!response.ok) return null;
+  const data = await response.json().catch(() => ({}));
+  return data.status || null;
+}
+
 app.post('/api/subscription/cancel', requireAuth, async (req, res) => {
   try {
     const sub = await activeSub(req.session.userId);
@@ -635,12 +644,18 @@ app.post('/api/account/delete', requireAuth, authLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Senha incorreta.' });
     }
 
-    const sub = await activeSub(userId);
-    if (sub && sub.mp_preapproval_id) {
-      if (!process.env.MP_ACCESS_TOKEN || !process.env.MP_ACCESS_TOKEN.trim()) {
-        return res.status(503).json({ error: 'Não foi possível cancelar sua assinatura agora. Fale com o suporte para excluir a conta.' });
-      }
-      if (!(await cancelarPreapprovalMP(sub.mp_preapproval_id))) {
+    // Cancela no Mercado Pago toda assinatura não cancelada, inclusive as que ainda
+    // constam como pendentes aqui mas já podem ter sido autorizadas lá.
+    const subs = await pool.query(
+      `SELECT mp_preapproval_id FROM public.subscriptions
+       WHERE user_id = $1 AND mp_preapproval_id IS NOT NULL AND status <> 'cancelled'`,
+      [userId]
+    );
+    if (subs.rows.length && (!process.env.MP_ACCESS_TOKEN || !process.env.MP_ACCESS_TOKEN.trim())) {
+      return res.status(503).json({ error: 'Não foi possível cancelar sua assinatura agora. Fale com o suporte para excluir a conta.' });
+    }
+    for (const { mp_preapproval_id: preapprovalId } of subs.rows) {
+      if (!(await cancelarPreapprovalMP(preapprovalId)) && (await statusPreapprovalMP(preapprovalId)) !== 'cancelled') {
         return res.status(502).json({ error: 'O Mercado Pago não confirmou o cancelamento da assinatura. Tente novamente em alguns minutos.' });
       }
     }
