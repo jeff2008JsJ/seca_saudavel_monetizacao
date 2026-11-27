@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Seca Saudável</string>
+    <string name="offline_title">Sem conexão</string>
+    <string name="offline_message">Não foi possível abrir o Seca Saudável. Verifique sua internet e tente de novo.</string>
+    <string name="retry">Tentar de novo</string>
+    <string name="no_app_for_link">Nenhum app encontrado para abrir este link.</string>
+</resources>
