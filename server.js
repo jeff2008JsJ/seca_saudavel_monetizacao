@@ -864,16 +864,24 @@ app.get(whatsapp.CAMINHO_WEBHOOK, (req, res) => {
   return res.type('text').send(req.query['hub.challenge']);
 });
 
-app.post(whatsapp.CAMINHO_WEBHOOK, (req, res) => {
+app.post(whatsapp.CAMINHO_WEBHOOK, async (req, res) => {
   if (!whatsappConfig) return res.sendStatus(404);
   if (!whatsapp.assinaturaValida(req.whatsappRawBody, req.get('x-hub-signature-256'), whatsappConfig.appSecret)) {
     return res.sendStatus(403);
   }
-  res.sendStatus(200);
-  setImmediate(() => {
-    whatsapp.processarWebhook(pool, whatsappConfig, req.body, BASE_URL)
-      .catch(erro => whatsapp.registrarErro('webhook', erro));
-  });
+  try {
+    const mensagens = await whatsapp.registrarRecebidas(pool, whatsappConfig, req.body);
+    res.sendStatus(200);
+    if (mensagens.length) {
+      setImmediate(() => {
+        whatsapp.responderMensagens(pool, whatsappConfig, mensagens, BASE_URL)
+          .catch(erro => whatsapp.registrarErro('respostas', erro));
+      });
+    }
+  } catch (erro) {
+    whatsapp.registrarErro('webhook', erro);
+    return res.sendStatus(500);
+  }
 });
 
 app.post('/api/webhooks/mercadopago', async (req, res) => {

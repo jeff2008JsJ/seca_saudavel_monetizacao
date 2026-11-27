@@ -166,43 +166,53 @@ function registrarErro(operacao, erro) {
   console.error(`WhatsApp (${operacao}): ${motivo}.`);
 }
 
-async function respostaAutomatica(pool, config, { telefone, texto, id, timestamp }, baseUrl) {
+async function registrarRecebidas(pool, config, body) {
   const agora = Date.now();
-  if (!Number.isFinite(timestamp) || timestamp * 1000 <= agora - 86400000 || timestamp * 1000 > agora + 300000) return;
-  const sair = COMANDOS_SAIDA.test(texto);
-  if (!sair && !config.respostasIa) return;
+  const mensagens = [...mensagensRecebidas(body, config.numeroId)].filter(({ timestamp, texto }) =>
+    timestamp * 1000 > agora - 86400000 && timestamp * 1000 <= agora + 300000 &&
+    (config.respostasIa || COMANDOS_SAIDA.test(texto))
+  );
+  if (!mensagens.length) return [];
 
-  if (sair) {
-    await pool.query(`
-      WITH recebido AS (
-        INSERT INTO public.whatsapp_messages (message_key, kind, phone, user_id)
-        SELECT $1, 'entrada', $2, CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM public.users WHERE phone = $2
-        ON CONFLICT DO NOTHING RETURNING phone
-      ), saida AS (
-        UPDATE public.users SET whatsapp_opt_in_at = NULL
-        WHERE phone IN (SELECT phone FROM recebido) AND whatsapp_opt_in_at IS NOT NULL
-      )
-      UPDATE public.whatsapp_messages SET body = NULL
-      WHERE phone IN (SELECT phone FROM recebido) AND body IS NOT NULL
-    `, [`entrada:${id}`, telefone]);
-    return;
+  const client = await pool.connect();
+  const paraResponder = [];
+  try {
+    await client.query('BEGIN');
+    for (const mensagem of mensagens) {
+      const { id, telefone, texto } = mensagem;
+      const sair = COMANDOS_SAIDA.test(texto);
+      const recebido = await client.query(`
+        INSERT INTO public.whatsapp_messages (message_key, kind, phone, body, user_id)
+        SELECT $1, 'entrada', $2, $3, CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM public.users WHERE phone = $2
+        ON CONFLICT DO NOTHING
+      `, [`entrada:${id}`, telefone, sair ? null : texto]);
+      if (!recebido.rowCount) continue;
+      if (sair) {
+        await client.query('UPDATE public.users SET whatsapp_opt_in_at = NULL WHERE phone = $1 AND whatsapp_opt_in_at IS NOT NULL', [telefone]);
+        await client.query('UPDATE public.whatsapp_messages SET body = NULL WHERE phone = $1 AND body IS NOT NULL', [telefone]);
+      } else {
+        paraResponder.push(mensagem);
+      }
+    }
+    await client.query('COMMIT');
+    return paraResponder;
+  } catch (erro) {
+    await client.query('ROLLBACK');
+    throw erro;
+  } finally {
+    client.release();
   }
+}
 
-  const recebido = await pool.query(`
-    INSERT INTO public.whatsapp_messages (message_key, kind, phone, body, user_id)
-    SELECT $1, 'entrada', $2, $3, CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM public.users WHERE phone = $2
-    ON CONFLICT DO NOTHING RETURNING user_id
-  `, [`entrada:${id}`, telefone, texto]);
-  if (!recebido.rowCount) return;
-
-  const { user_id: userId } = recebido.rows[0];
-  const chave = `resposta:${telefone}:${Math.floor(agora / 60000)}`;
+async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl) {
+  const chave = `resposta:${telefone}:${Math.floor(Date.now() / 60000)}`;
   const reserva = await pool.query(`
     INSERT INTO public.whatsapp_messages (message_key, kind, phone, user_id)
-    SELECT $1, 'resposta', $2, user_id FROM public.whatsapp_messages WHERE message_key = $3
-    ON CONFLICT DO NOTHING
+    SELECT $1, 'resposta', $2, user_id FROM public.whatsapp_messages WHERE message_key = $3 AND body IS NOT NULL
+    ON CONFLICT DO NOTHING RETURNING user_id
   `, [chave, telefone, `entrada:${id}`]);
   if (!reserva.rowCount) return;
+  const { user_id: userId } = reserva.rows[0];
 
   const suporte = `${baseUrl}/privacidade`;
   let resposta = `Olá! Este é o atendimento do Projeto Seca Saudável. Para falar com o suporte, consulte o contato em ${suporte}.`;
@@ -241,8 +251,8 @@ async function respostaAutomatica(pool, config, { telefone, texto, id, timestamp
   await pool.query('UPDATE public.whatsapp_messages SET body = $1 WHERE message_key = $2', [resposta, chave]);
 }
 
-async function processarWebhook(pool, config, body, baseUrl) {
-  for (const mensagem of mensagensRecebidas(body, config.numeroId)) {
+async function responderMensagens(pool, config, mensagens, baseUrl) {
+  for (const mensagem of mensagens) {
     try {
       await respostaAutomatica(pool, config, mensagem, baseUrl);
     } catch (erro) {
@@ -260,5 +270,5 @@ function limparConversas(pool) {
 
 module.exports = {
   CAMINHO_WEBHOOK, configuracao, normalizarTelefone, preferencias, assinaturaValida, mensagensRecebidas,
-  sendTemplate, sendText, migrar, notificar, lembrarRenovacoes, registrarErro, processarWebhook, limparConversas
+  sendTemplate, sendText, migrar, notificar, lembrarRenovacoes, registrarErro, registrarRecebidas, responderMensagens, limparConversas
 };
