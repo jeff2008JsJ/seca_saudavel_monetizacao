@@ -205,7 +205,7 @@ async function registrarRecebidas(pool, config, body) {
   }
 }
 
-async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl) {
+async function respostaAutomatica(pool, config, { telefone, texto, id }, entradasDoLote, baseUrl) {
   const chave = `resposta:${telefone}:${Math.floor(Date.now() / 60000)}`;
   const entrada = `entrada:${id}`;
   const reserva = await pool.query(`
@@ -221,14 +221,23 @@ async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl
   if (cfg) {
     try {
       const historico = await pool.query(`
-        SELECT anterior.kind, anterior.body FROM public.whatsapp_messages atual
-        JOIN public.whatsapp_messages anterior ON anterior.phone = atual.phone
-          AND anterior.user_id IS NOT DISTINCT FROM atual.user_id
-        WHERE atual.message_key = $1
-          AND (anterior.created_at, anterior.message_key) < (atual.created_at, atual.message_key)
-          AND anterior.body IS NOT NULL AND anterior.created_at >= NOW() - INTERVAL '7 days'
-        ORDER BY anterior.created_at DESC, anterior.message_key DESC LIMIT 6
-      `, [entrada]);
+        WITH contexto AS (
+          SELECT anterior.kind, anterior.body, anterior.created_at, anterior.message_key,
+            anterior.message_key = ANY($2::text[]) AS do_lote
+          FROM public.whatsapp_messages atual
+          JOIN public.whatsapp_messages anterior ON anterior.phone = atual.phone
+            AND anterior.user_id IS NOT DISTINCT FROM atual.user_id
+          WHERE atual.message_key = $1
+            AND (anterior.created_at, anterior.message_key) < (atual.created_at, atual.message_key)
+            AND anterior.body IS NOT NULL AND anterior.created_at >= NOW() - INTERVAL '7 days'
+        )
+        SELECT kind, body FROM (
+          SELECT *, ROW_NUMBER() OVER (PARTITION BY do_lote ORDER BY created_at DESC, message_key DESC) AS ordem
+          FROM contexto
+        ) AS ordenado
+        WHERE do_lote OR ordem <= 6
+        ORDER BY created_at, message_key
+      `, [entrada, entradasDoLote]);
       const resultado = await fetch(`${cfg.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
@@ -236,7 +245,7 @@ async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl
           model: cfg.model,
           messages: [
             { role: 'system', content: `Você é o assistente virtual do Projeto Seca Saudável, um desafio de 30 dias com treinos, cardápios e acompanhamento de hábitos. Responda em português brasileiro em no máximo três frases, apenas sobre o aplicativo. Não dê diagnóstico, orientação médica ou nutricional individual, nem solicite dados pessoais, de saúde ou de pagamento. Você não tem acesso a contas. Para cobrança, dados da conta ou ajuda humana, oriente a consultar o contato em ${suporte}. Não invente informações.` },
-            ...historico.rows.reverse().map(({ kind, body }) => ({ role: kind === 'entrada' ? 'user' : 'assistant', content: body })),
+            ...historico.rows.map(({ kind, body }) => ({ role: kind === 'entrada' ? 'user' : 'assistant', content: body })),
             { role: 'user', content: texto }
           ],
           [cfg.tokenField]: 500,
@@ -256,9 +265,10 @@ async function respostaAutomatica(pool, config, { telefone, texto, id }, baseUrl
 }
 
 async function responderMensagens(pool, config, mensagens, baseUrl) {
-  for (const mensagem of mensagens) {
+  for (const lote of Map.groupBy(mensagens, mensagem => mensagem.telefone).values()) {
     try {
-      await respostaAutomatica(pool, config, mensagem, baseUrl);
+      const anteriores = lote.slice(0, -1).map(({ id }) => `entrada:${id}`);
+      await respostaAutomatica(pool, config, lote.at(-1), anteriores, baseUrl);
     } catch (erro) {
       registrarErro('mensagem recebida', erro);
     }
