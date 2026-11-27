@@ -265,7 +265,13 @@ async function respostaAutomatica(pool, config, { telefone, texto, id }, entrada
 }
 
 async function responderMensagens(pool, config, mensagens, baseUrl) {
-  for (const lote of Map.groupBy(mensagens, mensagem => mensagem.telefone).values()) {
+  const porTelefone = new Map();
+  for (const mensagem of mensagens) {
+    const { telefone } = mensagem;
+    if (!porTelefone.has(telefone)) porTelefone.set(telefone, []);
+    porTelefone.get(telefone).push(mensagem);
+  }
+  for (const lote of porTelefone.values()) {
     try {
       const anteriores = lote.slice(0, -1).map(({ id }) => `entrada:${id}`);
       await respostaAutomatica(pool, config, lote.at(-1), anteriores, baseUrl);

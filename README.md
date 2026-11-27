@@ -61,7 +61,7 @@ Abra o `index.html`, procure o bloco `<script id="exerciseLibrary">` e altere o 
 
 ## Requisitos
 
-- Node.js 20 ou superior.
+- Node.js 22.x.
 - Banco PostgreSQL (Supabase).
 - Conta Mercado Pago com aplicação criada.
 - Hospedagem com HTTPS (ex.: Render).
