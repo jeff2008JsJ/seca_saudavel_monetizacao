@@ -10,11 +10,11 @@ Este pacote substitui os ZIPs anteriores baseados na versão antiga 4.2.0. Não 
 
 | Item | Publicação verificada | Neste pacote |
 | --- | --- | --- |
-| Abertura | Texto sem as novas fotos | Fotos locais de alimentação e treino; disposição responsiva |
+| Abertura | Texto sem as novas fotos | Fotos locais de alimentação e treino para visitantes e no topo do painel de contas conectadas; disposição responsiva |
 | Termos e privacidade | Links retornam 404 | Páginas em `public/`, com nome, CPF, telefone e data preenchidos |
 | Ícones, manifesto, estilo legal e service worker | Arquivos na raiz, fora da pasta servida | Arquivos existentes movidos para `public/`, sem alterar seu conteúdo |
 | Backend e dependências | Versão 4.5.0 | `server.js`, `ai.js`, conteúdo Premium, `package.json` e lockfile preservados |
-| IA, vídeos, cronômetro e checklist | Presentes no site atual | Scripts mantidos integralmente; nenhuma função removida |
+| IA, vídeos, cronômetro e checklist | Presentes no site atual | Funções preservadas; a atualização de conta também mostra/oculta as fotos do painel conforme a sessão |
 
 O selo visual “VERSÃO 4.0” do cabeçalho foi mantido como no código atual; ele não corresponde à versão 4.5.0 do backend/pacote.
 
